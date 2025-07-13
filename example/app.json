@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "NitroScreenRecorderExample",
+    "slug": "NitroScreenRecorderExample",
+    "version": "1.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "nitroscreenrecorderexample.example",
+      "appleTeamId": "32U9AXHQSK"
+    },
+    "android": {
+      "package": "nitroscreenrecorderexample.example"
+    }
+  }
+}
