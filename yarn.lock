@@ -1988,7 +1988,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@expo/config-plugins@npm:~10.1.2":
+"@expo/config-plugins@npm:^10.1.2, @expo/config-plugins@npm:~10.1.2":
   version: 10.1.2
   resolution: "@expo/config-plugins@npm:10.1.2"
   dependencies:
@@ -7018,6 +7018,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-video@npm:~2.2.2":
+  version: 2.2.2
+  resolution: "expo-video@npm:2.2.2"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: d077ecface876fb6e34dbd7f2195320538b4912c90b63d33b75801532a47cf227833e1fb836a7e532759a55984e14c345884a1987a93c7c5fcd07bb242e78bac
+  languageName: node
+  linkType: hard
+
 "expo@npm:^53.0.19":
   version: 53.0.19
   resolution: "expo@npm:53.0.19"
@@ -11678,6 +11689,7 @@ __metadata:
     expo: ^53.0.19
     expo-dev-client: ^5.2.4
     expo-status-bar: ~2.2.3
+    expo-video: ~2.2.2
     react: 19.0.0
     react-native: 0.79.5
     react-native-builder-bob: ^0.40.12
@@ -11695,6 +11707,7 @@ __metadata:
     "@eslint/eslintrc": ^3.3.0
     "@eslint/js": ^9.22.0
     "@evilmartians/lefthook": ^1.5.0
+    "@expo/config-plugins": ^10.1.2
     "@react-native/babel-preset": 0.79.2
     "@react-native/eslint-config": ^0.78.0
     "@release-it/conventional-changelog": ^9.0.2

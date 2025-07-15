@@ -3,15 +3,6 @@
   "version": "0.1.0",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
   "main": "./lib/module/index.js",
-  "types": "./lib/typescript/src/index.d.ts",
-  "exports": {
-    ".": {
-      "source": "./src/index.tsx",
-      "types": "./lib/typescript/src/index.d.ts",
-      "default": "./lib/module/index.js"
-    },
-    "./package.json": "./package.json"
-  },
   "files": [
     "src",
     "lib",
@@ -31,6 +22,7 @@
     "!**/__tests__",
     "!**/__fixtures__",
     "!**/__mocks__",
+    "app.plugin.js",
     "!**/.*"
   ],
   "scripts": {
@@ -39,7 +31,7 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build",
+    "prepare": "bob build && cd example && npx expo prebuild --clean && cd ../",
     "nitrogen": "nitro-codegen",
     "release": "release-it --only-version"
   },
@@ -67,6 +59,7 @@
     "@eslint/eslintrc": "^3.3.0",
     "@eslint/js": "^9.22.0",
     "@evilmartians/lefthook": "^1.5.0",
+    "@expo/config-plugins": "^10.1.2",
     "@react-native/babel-preset": "0.79.2",
     "@react-native/eslint-config": "^0.78.0",
     "@release-it/conventional-changelog": "^9.0.2",
@@ -139,6 +132,7 @@
     "source": "src",
     "output": "lib",
     "targets": [
+
       [
         "custom",
         {
@@ -152,12 +146,8 @@
           "esm": true
         }
       ],
-      [
-        "typescript",
-        {
-          "project": "tsconfig.build.json"
-        }
-      ]
+      "typescript",     
+      "commonjs"
     ]
   },
   "create-react-native-library": {
