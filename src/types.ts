@@ -12,7 +12,6 @@ export type PermissionResponse = {
 export type RecordingOptions = {
   enableMic: boolean;
   enableCamera: boolean;
-  systemWideRecording: false;
 };
 
 export interface ScreenRecordingFile {

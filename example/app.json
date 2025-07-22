@@ -33,7 +33,10 @@
         {
           "cameraPermissionText": "ScreenRecorder needs access to your Camera.",
           "enableMicrophonePermission": true,
-          "microphonePermissionText": "ScreenRecorder needs access to your Microphone."
+          "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
+          "enableGlobalRecording": true,
+          "iosBroadcastUploadExtensionName": "BroadcastExtension",
+          "iosBroadcastUploadExtensionSetupUIName": "BroadcastExtensionSetupUI"
       }
       ]
     ]

@@ -10,18 +10,33 @@ import type { PermissionResponse, ScreenRecordingFile } from './types';
  * COMPILE ERRORS THAT GIVE YOU CANCER. JUST BREAK
  * THE OBJECTS INTO INDIVIDUAL PROPERTIES
  */
+// type User = {
+//   name: string;
+//   address: string;
+// };
+
 export interface NitroScreenRecorder
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
   getCameraPermissionStatus(): Promise<PermissionResponse>;
   getMicrophonePermissionStatus(): Promise<PermissionResponse>;
   requestCameraPermission(): Promise<PermissionResponse>;
   requestMicrophonePermission(): Promise<PermissionResponse>;
-  startRecording(
+  startInAppRecording(
     enableMic: boolean,
     enableCamera: boolean,
-    systemWideRecording: boolean,
     onRecordingFinished: (file: ScreenRecordingFile) => void
+    // onRecordingError: (error: string) => void
   ): void;
+  startGlobalRecording(
+    enableMic: boolean,
+    enableCamera: boolean,
+    onRecordingFinished: (file: ScreenRecordingFile) => void
+    // onRecordingError: (error: string) => void
+  ): void;
+  // test(
+  //   onNewUserJoined: (user: User) => void,
+  //   onAnotherUserJoined: (user: User) => void
+  // ): void;
   stopRecording(): void;
   clearFiles(): void;
 }

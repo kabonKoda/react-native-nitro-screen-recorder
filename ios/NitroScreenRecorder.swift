@@ -3,55 +3,60 @@ import Foundation
 import NitroModules
 import ReplayKit
 
+enum RecorderError: Error {
+  case error(name: String, message: String)
+}
+
+typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
+//typealias RecordingErrorCallback = (String) -> Void
+
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   let recorder = RPScreenRecorder.shared()
-  //    private var assetWriter: AVAssetWriter?
-  //    private var videoInput: AVAssetWriterInput?
-  //    private var audioInput: AVAssetWriterInput?
-  //    private var outputURL: URL?
-  //    private var onRecordingFinished: RecordingFinishedCallback?
-  //    private var onRecordingError: RecordingErrorCallback?
-  //    private var isSystemWideRecording: Bool = false
+
+  private var onRecordingFinishedCallback: RecordingFinishedCallback?
+  private var isGlobalRecording = false
+  //  private var onRecordingErrorCallback: RecordingErrorCallback?
 
   private func mapAVAuthorizationStatusToPermissionResponse(_ status: AVAuthorizationStatus)
     -> PermissionResponse
   {
+    // -1 means that it never expires (default for iOS)
     switch status {
     case .authorized:
       return PermissionResponse(
         canAskAgain: false,
         granted: true,
         status: .granted,
-        expiresAt: -1  // -1 indicates "never expires"
+        expiresAt: -1
       )
     case .denied:
       return PermissionResponse(
         canAskAgain: false,
         granted: false,
         status: .denied,
-        expiresAt: -1  // -1 indicates "never expires"
+        expiresAt: -1
       )
     case .notDetermined:
       return PermissionResponse(
         canAskAgain: true,
         granted: false,
         status: .undetermined,
-        expiresAt: -1  // -1 indicates "never expires"
+        expiresAt: -1
       )
     case .restricted:
       return PermissionResponse(
         canAskAgain: false,
         granted: false,
         status: .denied,
-        expiresAt: -1  // -1 indicates "never expires"
+        expiresAt: -1
       )
     @unknown default:
       return PermissionResponse(
         canAskAgain: true,
         granted: false,
         status: .undetermined,
-        expiresAt: -1  // -1 indicates "never expires"
+        expiresAt: -1
       )
     }
   }
@@ -94,22 +99,182 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  func startRecording(
+  func startInAppRecording(
     enableMic: Bool,
     enableCamera: Bool,
-    systemWideRecording: Bool,
-    onRecordingFinished: (ScreenRecordingFile) -> Void,
+    onRecordingFinished: @escaping RecordingFinishedCallback
   ) throws {
 
-    return
+    self.onRecordingFinishedCallback = onRecordingFinished
+    self.isGlobalRecording = false
+
+    guard self.recorder.isAvailable else {
+      throw RecorderError.error(
+        name: "SCREEN_RECORDER_UNAVAILABLE",
+        message: "Screen recording is not available"
+      )
+    }
+
+    recorder.isCameraEnabled = enableCamera
+    recorder.isMicrophoneEnabled = enableMic
+    recorder.startRecording { [weak self] error in
+      if let error = error {
+        print("Error starting in-app recording: \(error.localizedDescription)")
+      }
+    }
+  }
+
+  func startGlobalRecording(
+    enableMic: Bool,
+    enableCamera: Bool,
+    onRecordingFinished: @escaping RecordingFinishedCallback
+  ) throws {
+
+    self.onRecordingFinishedCallback = onRecordingFinished
+    self.isGlobalRecording = true
+
+    // Get your broadcast extension bundle ID
+    let extensionBundleID = Bundle.main.bundleIdentifier! + ".BroadcastUploadExtension"
+
+    RPBroadcastController.showSetupViewController(extensionBundleID: extensionBundleID) {
+      [weak self] controller, error in
+      if let error = error {
+        print("Error setting up broadcast: \(error.localizedDescription)")
+        return
+      }
+
+      guard let controller = controller else {
+        print("No broadcast controller returned")
+        return
+      }
+
+      self?.broadcastController = controller
+      controller.delegate = self
+
+      // Start broadcasting
+      controller.startBroadcast { error in
+        if let error = error {
+          print("Error starting broadcast: \(error.localizedDescription)")
+        } else {
+          print("Global recording started successfully")
+        }
+      }
+    }
   }
 
   func stopRecording() throws {
-    return
+    if isGlobalRecording {
+      // Stop global recording
+      broadcastController?.finishBroadcast { [weak self] error in
+        if let error = error {
+          print("Error stopping broadcast: \(error.localizedDescription)")
+        } else {
+          // Broadcast stopped, get the recorded file from shared container
+          self?.retrieveRecordedFile()
+        }
+      }
+    } else {
+      // Stop in-app recording (your current implementation)
+      guard recorder.isRecording else {
+        throw RecorderError.error(
+          name: "SCREEN_RECORDING_INACTIVE",
+          message: "You called screen recording when it was not active."
+        )
+      }
+
+      let name = UUID().uuidString + ".mov"
+      let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+
+      recorder.stopRecording(withOutput: url) { [weak self] error in
+        if let error = error {
+          print("Error stopping recording: \(error.localizedDescription)")
+          return
+        }
+
+        let asset = AVURLAsset(url: url)
+        let duration = CMTimeGetSeconds(asset.duration)
+
+        self?.onRecordingFinishedCallback?(
+          ScreenRecordingFile(
+            path: url.absoluteString,
+            duration: duration
+          )
+        )
+      }
+    }
+  }
+
+  private func retrieveRecordedFile() {
+    // Access the shared container where the extension saved the recording
+    guard
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: "group.your.app.screenrecorder")
+    else {
+      print("Could not access shared container")
+      return
+    }
+
+    let recordingsURL = containerURL.appendingPathComponent("recordings")
+
+    do {
+      let files = try FileManager.default.contentsOfDirectory(
+        at: recordingsURL, includingPropertiesForKeys: [.creationDateKey], options: [])
+
+      // Get the most recent recording
+      let sortedFiles = files.sorted { file1, file2 in
+        let date1 =
+          (try? file1.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+        let date2 =
+          (try? file2.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantPast
+        return date1 > date2
+      }
+
+      if let latestFile = sortedFiles.first {
+        let asset = AVURLAsset(url: latestFile)
+        let duration = CMTimeGetSeconds(asset.duration)
+
+        onRecordingFinishedCallback?(
+          ScreenRecordingFile(
+            path: latestFile.absoluteString,
+            duration: duration
+          )
+        )
+      }
+    } catch {
+      print("Error retrieving recorded file: \(error.localizedDescription)")
+    }
   }
 
   func clearFiles() throws {
-    return
+    // Clear both temporary files and shared container files
+    let tempDir = FileManager.default.temporaryDirectory
+
+    // Clear temp directory
+    do {
+      let tempFiles = try FileManager.default.contentsOfDirectory(
+        at: tempDir, includingPropertiesForKeys: nil)
+      for file in tempFiles where file.pathExtension == "mov" {
+        try FileManager.default.removeItem(at: file)
+      }
+    } catch {
+      print("Error clearing temp files: \(error.localizedDescription)")
+    }
+
+    // Clear shared container
+    if let containerURL = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: "group.your.app.screenrecorder")
+    {
+      let recordingsURL = containerURL.appendingPathComponent("recordings")
+      do {
+        let sharedFiles = try FileManager.default.contentsOfDirectory(
+          at: recordingsURL, includingPropertiesForKeys: nil)
+        for file in sharedFiles {
+          try FileManager.default.removeItem(at: file)
+        }
+      } catch {
+        print("Error clearing shared files: \(error.localizedDescription)")
+      }
+    }
   }
 
   //
@@ -120,11 +285,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   //      self.isSystemWideRecording = options.systemWideRecording
   //
   //      // Check if recording is available
-  //      guard self.recorder.isAvailable else {
-  //        let error = NSError(domain: "ScreenRecorder", code: 1, userInfo: [NSLocalizedDescriptionKey: "Screen recording is not available"])
-  //        onRecordingErrorCallback(error)
-  //        return
-  //      }
+
   //
   //      // Set up recording options
   //      self.recorder.isCameraEnabled = options.enableCamera

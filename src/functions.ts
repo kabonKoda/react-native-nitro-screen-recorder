@@ -25,15 +25,29 @@ export async function requestMicrophonePermission(): Promise<PermissionResponse>
   return NitroScreenRecorderHybridObject.requestMicrophonePermission();
 }
 
-export async function startRecording(
+export async function startInAppRecording(
   options: RecordingOptions,
-  onRecordingFinishedCallback: (file: ScreenRecordingFile) => void
+  onRecordingFinished: (file: ScreenRecordingFile) => void
+  // onRecordingError: (message: string) => void
 ): Promise<void> {
-  return NitroScreenRecorderHybridObject.startRecording(
+  return NitroScreenRecorderHybridObject.startInAppRecording(
     options.enableMic,
     options.enableCamera,
-    options.systemWideRecording,
-    onRecordingFinishedCallback
+    onRecordingFinished
+    // onRecordingError
+  );
+}
+
+export async function startGlobalRecording(
+  options: RecordingOptions,
+  onRecordingFinished: (file: ScreenRecordingFile) => void
+  // onRecordingError: (message: string) => void
+): Promise<void> {
+  return NitroScreenRecorderHybridObject.startGlobalRecording(
+    options.enableMic,
+    options.enableCamera,
+    onRecordingFinished
+    // onRecordingError
   );
 }
 

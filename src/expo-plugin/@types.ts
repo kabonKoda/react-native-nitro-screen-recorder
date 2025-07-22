@@ -4,27 +4,60 @@ export interface ConfigProps {
    * @default "Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay"
    */
   cameraPermissionText?: string;
-
   /**
    * Whether to enable microphone permission
    * @default true
    */
   enableMicrophonePermission?: boolean;
-
   /**
    * Microphone permission description text for iOS
    * @default "Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio"
    */
   microphonePermissionText?: string;
+  // /**
+  //  * Photo library permission description text for iOS
+  //  * @default "Allow $(PRODUCT_NAME) to save recorded videos to your photo library"
+  //  */
+  // photoLibraryPermissionText: string;
+  /**
+   * Whether to enable global screen recording (records even when the app is backgrounded)
+   * @default false
+   * @example true
+   */
+  enableGlobalRecording?: boolean;
 
   /**
-   * Photo library permission description text for iOS
-   * @default "Allow $(PRODUCT_NAME) to save recorded videos to your photo library"
+   * Name of the Broadcast Upload Extension target in Xcode
+   * @default "BroadcastUploadExtension"
+   * @example "MyAppBroadcastUploadExtension"
    */
-  photoLibraryPermissionText?: string;
+  iosBroadcastUploadExtensionName?: string;
+
   /**
-   * Whether to enable system-wide recording permissions (Android)
-   * @default false
+   * Name of the Broadcast Setup UI Extension target in Xcode
+   * @default "BroadcastSetupUI"
+   * @example "MyAppBroadcastSetupUI"
    */
-  systemWideRecording?: boolean;
+  iosBroadcastUploadExtensionSetupUIName?: string;
+
+  /**
+   * App Group identifier used to share data between the app and its extensions
+   * @default `group.$\{PRODUCT_BUNDLE_IDENTIFIER\}.screenrecording`
+   * @example "group.com.mycompany.myapp.screenrecording"
+   */
+  iosAppGroupIdentifier?: string;
+
+  /**
+   * Bundle identifier for the Broadcast Upload Extension
+   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-upload-extension`
+   * @example "com.mycompany.myapp.broadcast-extension"
+   */
+  iosBroadcastUploadExtensionBundleIdentifier?: string;
+
+  /**
+   * Bundle identifier for the Broadcast Setup UI Extension
+   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-extension-setup-ui`
+   * @example "com.mycompany.myapp.broadcast-extension-setup-ui"
+   */
+  iosBroadcastUploadExtensionSetupUIBundleIdentifier?: string;
 }
