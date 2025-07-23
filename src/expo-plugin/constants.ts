@@ -1,9 +1,10 @@
 import { ConfigProps } from './@types';
 
 export const broadcastExtensionName = 'BroadcastExtension';
-export const broadcastExtensionSetupUIFileName = 'BroadcastExtensionSetupUI';
+export const broadcastExtensionSetupUIName = 'BroadcastExtensionSetupUI';
 
 export const broadcastExtensionSampleHandlerFileName = 'SampleHandler.swift';
+export const broadcastExtensionStoryBoardFileName = 'MainInterface.storyboard';
 
 export const broadcastExtensionSetupUIViewControllerFileName =
   'BroadcastSetupViewController.swift';
@@ -19,7 +20,7 @@ export const getBroadcastExtensionName = (parameters?: ConfigProps) => {
 
 export const getBroadcastExtensionSetupUIName = (parameters?: ConfigProps) => {
   if (!parameters?.iosBroadcastUploadExtensionSetupUIName)
-    return broadcastExtensionSetupUIFileName;
+    return broadcastExtensionSetupUIName;
   return parameters.iosBroadcastUploadExtensionSetupUIName.replace(
     /[^a-zA-Z0-9]/g,
     ''

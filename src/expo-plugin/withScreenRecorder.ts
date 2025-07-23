@@ -5,7 +5,7 @@ import {
 } from '@expo/config-plugins';
 import type { ConfigPlugin } from '@expo/config-plugins';
 import type { ConfigProps } from './@types';
-import { withBroadcastExtension } from './withBroadcastExtension';
+import { withBroadcastExtension } from './ios/withBroadcastExtension';
 
 const pkg: { name: string; version: string } = require('../../../package.json');
 

@@ -2,6 +2,7 @@
   "expo": {
     "name": "NitroScreenRecorderExample",
     "slug": "NitroScreenRecorderExample",
+    "scheme": "nitroscreenrecorderexample",
     "version": "1.0.0",
     "platforms": [
       "ios",
@@ -35,6 +36,7 @@
           "enableMicrophonePermission": true,
           "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
           "enableGlobalRecording": true,
+          "disableExperimental": false,
           "iosBroadcastUploadExtensionName": "BroadcastExtension",
           "iosBroadcastUploadExtensionSetupUIName": "BroadcastExtensionSetupUI"
       }

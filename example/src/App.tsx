@@ -43,7 +43,7 @@ export default function App() {
   };
 
   const handleStartRecording = async () => {
-    await ScreenRecorder.startInAppRecording(
+    await ScreenRecorder.startGlobalRecording(
       RECORDING_OPTIONS,
       (file) => {
         console.log('Finished with', file);

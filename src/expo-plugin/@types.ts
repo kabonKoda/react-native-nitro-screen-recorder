@@ -14,6 +14,12 @@ export interface ConfigProps {
    * @default "Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio"
    */
   microphonePermissionText?: string;
+  /*
+   *
+   * @default false
+   * @example true
+   */
+  disableExperimental?: boolean;
   // /**
   //  * Photo library permission description text for iOS
   //  * @default "Allow $(PRODUCT_NAME) to save recorded videos to your photo library"
