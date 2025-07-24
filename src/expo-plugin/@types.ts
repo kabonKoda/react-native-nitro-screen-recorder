@@ -38,14 +38,12 @@ export interface ConfigProps {
    * @example "MyAppBroadcastUploadExtension"
    */
   iosBroadcastUploadExtensionName?: string;
-
   /**
-   * Name of the Broadcast Setup UI Extension target in Xcode
-   * @default "BroadcastSetupUI"
-   * @example "MyAppBroadcastSetupUI"
+   * Name of the Broadcast Upload Extension target in Xcode
+   * @default "`Stream your screen back to ${appName}`"
+   * @example "Record your screen for collaboration"
    */
-  iosBroadcastUploadExtensionSetupUIName?: string;
-
+  iosBroadcastUploadExtensionUsageDescription?: string;
   /**
    * App Group identifier used to share data between the app and its extensions
    * @default `group.$\{PRODUCT_BUNDLE_IDENTIFIER\}.screenrecording`
@@ -55,15 +53,8 @@ export interface ConfigProps {
 
   /**
    * Bundle identifier for the Broadcast Upload Extension
-   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-upload-extension`
+   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-extension`
    * @example "com.mycompany.myapp.broadcast-extension"
    */
   iosBroadcastUploadExtensionBundleIdentifier?: string;
-
-  /**
-   * Bundle identifier for the Broadcast Setup UI Extension
-   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-extension-setup-ui`
-   * @example "com.mycompany.myapp.broadcast-extension-setup-ui"
-   */
-  iosBroadcastUploadExtensionSetupUIBundleIdentifier?: string;
 }

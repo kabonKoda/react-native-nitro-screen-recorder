@@ -38,7 +38,7 @@
           "enableGlobalRecording": true,
           "disableExperimental": false,
           "iosBroadcastUploadExtensionName": "BroadcastExtension",
-          "iosBroadcastUploadExtensionSetupUIName": "BroadcastExtensionSetupUI"
+          "iosBroadcastUploadExtensionUsageDescription": "Record your screen for sharing content."
       }
       ]
     ]

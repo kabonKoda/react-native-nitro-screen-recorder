@@ -1,9 +1,11 @@
 import { ConfigProps } from './@types';
 
 export const broadcastExtensionName = 'BroadcastExtension';
-export const broadcastExtensionSetupUIName = 'BroadcastExtensionSetupUI';
+// export const broadcastExtensionSetupUIName = 'BroadcastExtensionSetupUI';
 
 export const broadcastExtensionSampleHandlerFileName = 'SampleHandler.swift';
+export const broadcastPickerViewControllerName =
+  'BroadcastPickerViewController.swift';
 export const broadcastExtensionStoryBoardFileName = 'MainInterface.storyboard';
 
 export const broadcastExtensionSetupUIViewControllerFileName =
@@ -18,14 +20,14 @@ export const getBroadcastExtensionName = (parameters?: ConfigProps) => {
   );
 };
 
-export const getBroadcastExtensionSetupUIName = (parameters?: ConfigProps) => {
-  if (!parameters?.iosBroadcastUploadExtensionSetupUIName)
-    return broadcastExtensionSetupUIName;
-  return parameters.iosBroadcastUploadExtensionSetupUIName.replace(
-    /[^a-zA-Z0-9]/g,
-    ''
-  );
-};
+// export const getBroadcastExtensionSetupUIName = (parameters?: ConfigProps) => {
+//   if (!parameters?.iosBroadcastUploadExtensionSetupUIName)
+//     return broadcastExtensionSetupUIName;
+//   return parameters.iosBroadcastUploadExtensionSetupUIName.replace(
+//     /[^a-zA-Z0-9]/g,
+//     ''
+//   );
+// };
 
 export const getAppGroup = (identifier: string, parameters: ConfigProps) => {
   return parameters.iosAppGroupIdentifier || `group.${identifier}`;
@@ -41,12 +43,12 @@ export const getBroadcastExtensionBundleIdentifier = (
   );
 };
 
-export const getBroadcastExtensionSetupUIBundleIdentifier = (
-  appIdentifier: string,
-  parameters: ConfigProps
-) => {
-  return (
-    parameters.iosBroadcastUploadExtensionSetupUIBundleIdentifier ||
-    `${appIdentifier}.broadcast-extension-setup-ui`
-  );
-};
+// export const getBroadcastExtensionSetupUIBundleIdentifier = (
+//   appIdentifier: string,
+//   parameters: ConfigProps
+// ) => {
+//   return (
+//     parameters.iosBroadcastUploadExtensionSetupUIBundleIdentifier ||
+//     `${appIdentifier}.broadcast-extension-setup-ui`
+//   );
+// };

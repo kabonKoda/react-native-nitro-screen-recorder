@@ -3,13 +3,8 @@ import { ConfigPlugin } from '@expo/config-plugins';
 import {
   getBroadcastExtensionBundleIdentifier,
   getBroadcastExtensionName,
-  getBroadcastExtensionSetupUIBundleIdentifier,
-  getBroadcastExtensionSetupUIName,
 } from '../constants';
-import {
-  getBroadcastExtensionEntitlements,
-  getBroadcastExtensionSetupUIEntitlements,
-} from './writeBroadcastExtensionFiles';
+import { getBroadcastExtensionEntitlements } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
 
 export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
@@ -19,12 +14,6 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
   const extName = getBroadcastExtensionName(props);
   const appIdentifier = config.ios!.bundleIdentifier!;
   const extIdentifier = getBroadcastExtensionBundleIdentifier(
-    appIdentifier,
-    props
-  );
-
-  const extSetupUIName = getBroadcastExtensionSetupUIName(props);
-  const extSetupUIIdentifier = getBroadcastExtensionSetupUIBundleIdentifier(
     appIdentifier,
     props
   );
@@ -63,10 +52,6 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
         targetName: extName,
         bundleIdentifier: extIdentifier,
       });
-      config.extra.eas.build.experimental.ios.appExtensions.push({
-        targetName: extSetupUIName,
-        bundleIdentifier: extSetupUIIdentifier,
-      });
       extConfigIndex =
         config.extra.eas.build.experimental.ios.appExtensions.length - 1;
     }
@@ -76,7 +61,6 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
     extConfig.entitlements = {
       ...extConfig.entitlements,
       ...getBroadcastExtensionEntitlements(appIdentifier, props),
-      ...getBroadcastExtensionSetupUIEntitlements(appIdentifier, props),
     };
   } else {
     console.warn(

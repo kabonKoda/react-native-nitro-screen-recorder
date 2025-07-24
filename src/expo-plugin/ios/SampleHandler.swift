@@ -16,42 +16,71 @@ class SampleHandler: RPBroadcastSampleHandler {
   private var recordingId: String?
 
   override func broadcastStarted(withSetupInfo setupInfo: [String: NSObject]?) {
-    // Read preferences from shared container first
-    readRecordingPreferences()
-    
-    // Override with setup info if provided
-    if let setupInfo = setupInfo {
-      enableMicrophone = setupInfo["enableMicrophone"] as? Bool ?? enableMicrophone
-      enableCamera = setupInfo["enableCamera"] as? Bool ?? enableCamera
-      if let id = setupInfo["recordingId"] as? String {
-        recordingId = id
-      }
+    print("=== Broadcast Extension Started ===")
+    print("Setup info: \(setupInfo ?? [:])")
+
+    // Validate app group access first
+    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
+    else {
+      let error = NSError(
+        domain: "BroadcastSampleHandler", code: -1,
+        userInfo: [NSLocalizedDescriptionKey: "AppGroupIdentifier not found in Info.plist"])
+      print("❌ AppGroupIdentifier missing from broadcast extension Info.plist")
+      finishBroadcastWithError(error)
+      return
     }
 
-    print("Broadcast started with mic: \(enableMicrophone), camera: \(enableCamera)")
+    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
+    else {
+      let error = NSError(
+        domain: "BroadcastSampleHandler", code: -2,
+        userInfo: [NSLocalizedDescriptionKey: "Cannot access app group container: \(appGroupId)"])
+      print("❌ Cannot access app group: \(appGroupId)")
+      finishBroadcastWithError(error)
+      return
+    }
+
+    print("✅ App group access verified: \(appGroupId)")
+
+    // Read preferences from shared container
+    readRecordingPreferences()
+
+    print("✅ Broadcast started with mic: \(enableMicrophone), camera: \(enableCamera)")
     setupRecording()
   }
-  
+
   private func readRecordingPreferences() {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      print("Could not access shared container for preferences")
+    guard
+      let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      print("Could not access shared container for preferences - using defaults")
+      enableMicrophone = true
+      enableCamera = false
+      recordingId = UUID().uuidString
       return
     }
-    
+
     let preferencesFile = containerURL.appendingPathComponent("recording_preferences.json")
-    
+
     guard let jsonData = try? Data(contentsOf: preferencesFile),
-          let preferences = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
-      print("Could not read recording preferences")
+      let preferences = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+    else {
+      print("Could not read recording preferences - using defaults")
+      enableMicrophone = true
+      enableCamera = false
+      recordingId = UUID().uuidString
       return
     }
-    
+
     enableMicrophone = preferences["enableMicrophone"] as? Bool ?? true
     enableCamera = preferences["enableCamera"] as? Bool ?? false
     recordingId = preferences["recordingId"] as? String ?? UUID().uuidString
-    
-    print("Read preferences: mic=\(enableMicrophone), camera=\(enableCamera), id=\(recordingId ?? "none")")
+
+    print(
+      "Read preferences: mic=\(enableMicrophone), camera=\(enableCamera), id=\(recordingId ?? "none")"
+    )
   }
 
   override func broadcastPaused() {
@@ -85,8 +114,11 @@ class SampleHandler: RPBroadcastSampleHandler {
   }
 
   private func setupRecording() {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
+    guard
+      let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
       finishBroadcastWithError(
         NSError(
           domain: "BroadcastSampleHandler", code: -1,
@@ -96,7 +128,13 @@ class SampleHandler: RPBroadcastSampleHandler {
 
     // Create recordings directory
     let recordingsURL = containerURL.appendingPathComponent("recordings")
-    try? FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
+    do {
+      try FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
+    } catch {
+      print("Error creating recordings directory: \(error)")
+      finishBroadcastWithError(error)
+      return
+    }
 
     // Create output file
     let fileName = "\(recordingId ?? UUID().uuidString)_\(Int(Date().timeIntervalSince1970)).mp4"
@@ -119,7 +157,7 @@ class SampleHandler: RPBroadcastSampleHandler {
       let scale = UIScreen.main.scale
       let width = Int(screenSize.width * scale)
       let height = Int(screenSize.height * scale)
-      
+
       let videoSettings: [String: Any] = [
         AVVideoCodecKey: AVVideoCodecType.h264,
         AVVideoWidthKey: width,
@@ -170,10 +208,10 @@ class SampleHandler: RPBroadcastSampleHandler {
       }
 
       isRecording = true
-      print("Recording setup completed successfully")
+      print("✅ Recording setup completed successfully")
 
     } catch {
-      print("Error setting up recording: \(error.localizedDescription)")
+      print("❌ Error setting up recording: \(error.localizedDescription)")
       finishBroadcastWithError(error)
     }
   }
@@ -231,21 +269,24 @@ class SampleHandler: RPBroadcastSampleHandler {
       guard let self = self else { return }
 
       if self.assetWriter?.status == .completed {
-        print("Recording completed successfully")
+        print("✅ Recording completed successfully")
         self.notifyMainApp()
       } else if let error = self.assetWriter?.error {
-        print("Recording failed with error: \(error.localizedDescription)")
+        print("❌ Recording failed with error: \(error.localizedDescription)")
         self.finishBroadcastWithError(error)
       }
     }
   }
 
-   private func notifyMainApp() {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId),
-          let recordingURL = recordingURL else { 
+  private func notifyMainApp() {
+    guard
+      let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId),
+      let recordingURL = recordingURL
+    else {
       print("Could not access shared container for notification")
-      return 
+      return
     }
 
     let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
@@ -260,9 +301,9 @@ class SampleHandler: RPBroadcastSampleHandler {
     do {
       let jsonData = try JSONSerialization.data(withJSONObject: recordingInfo)
       try jsonData.write(to: notificationFile)
-      print("Notification file written successfully - main app will detect via polling")
+      print("✅ Notification file written successfully - main app will detect via polling")
     } catch {
-      print("Error notifying main app: \(error.localizedDescription)")
+      print("❌ Error notifying main app: \(error.localizedDescription)")
     }
   }
 }

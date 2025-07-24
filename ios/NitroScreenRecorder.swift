@@ -3,23 +3,6 @@ import Foundation
 import NitroModules
 import ReplayKit
 
-extension UIViewController {
-  func topMostViewController() -> UIViewController {
-    if let p = presentedViewController {
-      return p.topMostViewController()
-    }
-    if let nav = self as? UINavigationController,
-       let v = nav.visibleViewController {
-      return v.topMostViewController()
-    }
-    if let tab = self as? UITabBarController,
-       let s = tab.selectedViewController {
-      return s.topMostViewController()
-    }
-    return self
-  }
-}
-
 enum RecorderError: Error {
   case error(name: String, message: String)
 }
@@ -29,18 +12,21 @@ typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   private let recorder = RPScreenRecorder.shared()
-  private var broadcastController: RPBroadcastController?
+
+  private var broadcastDelegate: BroadcastDelegate?
+  private var activeBroadcastController: RPBroadcastController?
+
   private var onRecordingFinishedCallback: RecordingFinishedCallback?
   private var isGlobalRecording = false
   private var globalRecordingId: String?
-  
+
   // Polling timer for checking broadcast extension completion
   private var pollingTimer: Timer?
-  
+
   override init() {
     super.init()
   }
-  
+
   deinit {
     stopPolling()
   }
@@ -126,6 +112,19 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
+  private func getAppGroupIdentifier() throws -> String {
+    let appGroupIdentifier: String? =
+      Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
+
+    guard let appGroupIdentifier = appGroupIdentifier else {
+      throw RecorderError.error(
+        name: "APP_GROUP_IDENTIFIER_MISSING",
+        message: "appGroupIdentifier is nil"
+      )
+    }
+    return appGroupIdentifier
+  }
+
   func startInAppRecording(
     enableMic: Bool,
     enableCamera: Bool,
@@ -167,22 +166,26 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
     }
 
-    // Store recording preferences in shared container for the broadcast extension
-    storeRecordingPreferences(enableMic: enableMic, enableCamera: enableCamera)
+    // Store preferences in app group for broadcast extension
+    try storeRecordingPreferences(enableMic: enableMic, enableCamera: enableCamera)
 
-    RPBroadcastActivityViewController.load { [weak self] picker, error in
+    broadcastDelegate = BroadcastDelegate(recorder: self)
+
+    RPBroadcastActivityViewController.load { [weak self] vc, error in
       guard let self = self else { return }
+
       if let error = error {
-        print("Picker load failed:", error)
+        print("Failed to load broadcast activity view controller:", error)
         return
       }
-      guard let picker = picker else {
-        print("No picker")
+
+      guard let vc = vc else {
+        print("No broadcast activity view controller")
         return
       }
-//      picker.delegate = self
-      
-      // Present from top VC
+
+      vc.delegate = self.broadcastDelegate
+
       DispatchQueue.main.async {
         UIApplication.shared
           .connectedScenes
@@ -192,240 +195,214 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
           .first(where: { $0.isKeyWindow })?
           .rootViewController?
           .topMostViewController()
-          .present(picker, animated: true)
+          .present(vc, animated: true)
       }
     }
   }
-  
-  private func storeRecordingPreferences(enableMic: Bool, enableCamera: Bool) {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      print("Could not access shared container")
-      return
+
+  private func storeRecordingPreferences(enableMic: Bool, enableCamera: Bool) throws {
+    let appGroupId = try getAppGroupIdentifier()
+
+    guard let containerURL = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: appGroupId
+    ) else {
+      throw RecorderError.error(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message: "Could not access app group container"
+      )
     }
-    
+
     let preferencesFile = containerURL.appendingPathComponent("recording_preferences.json")
-    
+
     let preferences: [String: Any] = [
       "enableMicrophone": enableMic,
       "enableCamera": enableCamera,
       "recordingId": globalRecordingId ?? UUID().uuidString,
-      "timestamp": Date().timeIntervalSince1970
+      "timestamp": Date().timeIntervalSince1970,
     ]
-    
+
     do {
       let jsonData = try JSONSerialization.data(withJSONObject: preferences)
       try jsonData.write(to: preferencesFile)
+      print("Recording preferences stored successfully")
     } catch {
-      print("Error storing recording preferences: \(error.localizedDescription)")
+      throw RecorderError.error(
+        name: "PREFERENCES_WRITE_FAILED",
+        message: "Failed to store recording preferences: \(error.localizedDescription)"
+      )
     }
   }
 
-  @objc(broadcastActivityViewController:didFinishWithBroadcastController:error:)
+  func handleBroadcastControllerReceived(_ broadcastController: RPBroadcastController) {
+    self.activeBroadcastController = broadcastController
+    print("Made it here")
+    // Start the broadcast immediately
+    broadcastController.startBroadcast { [weak self] error in
+      if let error = error {
+        print("Failed to start broadcast:", error)
+        self?.handleBroadcastError(error)
+      } else {
+        print("Broadcast started successfully!")
+        let url = broadcastController.broadcastURL
+        print("Broadcast URL: \(url)")
+        self?.startPollingForCompletion()
+      }
+    }
+  }
+
+  func handleBroadcastCancelled(error: Error?) {
+    print("Broadcast was cancelled")
+    broadcastDelegate = nil
+    activeBroadcastController = nil
+    isGlobalRecording = false
+  }
+
+  func handleBroadcastError(_ error: Error) {
+    print("Broadcast error:", error)
+    // Call callback with error
+    let errorFile = ScreenRecordingFile(
+      path: "",
+      duration: 0,
+    )
+    onRecordingFinishedCallback?(errorFile)
+  }
+
+  func stopRecording() {
+    activeBroadcastController?.finishBroadcast { [weak self] error in
+      if let error = error {
+        print("Error stopping broadcast:", error)
+      } else {
+        print("Broadcast stopped successfully")
+      }
+
+      self?.cleanupRecording()
+    }
+  }
+
+  private func cleanupRecording() {
+    activeBroadcastController = nil
+    broadcastDelegate = nil
+    isGlobalRecording = false
+  }
+  
+  func clearFiles() throws {
+    return
+  }
+
+  private func startPollingForCompletion() {
+    // Poll for completion notification from broadcast extension
+    Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+      guard let self = self, self.isGlobalRecording else {
+        timer.invalidate()
+        return
+      }
+
+      self.checkForCompletedRecording { completed in
+        if completed {
+          timer.invalidate()
+        }
+      }
+    }
+  }
+
+  private func stopPolling() {
+    pollingTimer?.invalidate()
+    pollingTimer = nil
+  }
+
+  private func checkForCompletedRecording(completion: @escaping (Bool) -> Void) {
+    guard let appGroupId = try? getAppGroupIdentifier(),
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      completion(false)
+      return
+    }
+
+    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
+
+    guard let jsonData = try? Data(contentsOf: notificationFile),
+      let recordingInfo = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+      let filePath = recordingInfo["filePath"] as? String,
+      let fileName = recordingInfo["fileName"] as? String,
+      let timestamp = recordingInfo["timestamp"] as? TimeInterval
+    else {
+      completion(false)
+      return
+    }
+
+    // Check if this is a new recording (within last 5 seconds of when we started)
+    let recordingDate = Date(timeIntervalSince1970: timestamp)
+    let now = Date()
+
+    if now.timeIntervalSince(recordingDate) < 5 {
+      // Get file size and duration
+      let fileURL = URL(fileURLWithPath: filePath)
+      let fileSize =
+        (try? FileManager.default.attributesOfItem(atPath: filePath)[.size] as? Int64) ?? 0
+
+      let recordingFile = ScreenRecordingFile(
+        path: filePath,
+        duration: 0,
+      )
+
+      onRecordingFinishedCallback?(recordingFile)
+      cleanupRecording()
+
+      // Clean up notification file
+      try? FileManager.default.removeItem(at: notificationFile)
+
+      completion(true)
+    } else {
+      completion(false)
+    }
+  }
+}
+
+private class BroadcastDelegate: NSObject, RPBroadcastActivityViewControllerDelegate {
+  weak var recorder: NitroScreenRecorder?
+
+  init(recorder: NitroScreenRecorder) {
+    self.recorder = recorder
+    super.init()
+  }
+
   func broadcastActivityViewController(
     _ broadcastActivityViewController: RPBroadcastActivityViewController,
     didFinishWith broadcastController: RPBroadcastController?,
     error: Error?
   ) {
-    broadcastActivityViewController.dismiss(animated: true) {
-      if let err = error {
-        print("Setup error:", err)
-        return
-      }
-      guard let controller = broadcastController else {
-        print("No controller returned")
-        return
-      }
-      self.broadcastController = controller
-//      controller.delegate = self
-      controller.startBroadcast { [weak self] err in
-        if let err = err {
-          print("Broadcast start failed:", err.localizedDescription)
-        } else {
-          print("Global broadcast started")
-          // Start polling for completion
-          self?.startPollingForCompletion()
-        }
-      }
-    }
-  }
-  
-  // MARK: - RPBroadcastControllerDelegate
-  
-  func broadcastController(_ broadcastController: RPBroadcastController, didFinishWithError error: Error?) {
-    print("Broadcast finished with error: \(error?.localizedDescription ?? "none")")
-    // Stop polling and try to retrieve the file
-    stopPolling()
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-      self?.retrieveRecordedFile()
-    }
-  }
-  
-  func broadcastController(_ broadcastController: RPBroadcastController, didUpdateServiceInfo serviceInfo: [String : NSCoding & NSObjectProtocol]) {
-    print("Broadcast service info updated: \(serviceInfo)")
-  }
+    broadcastActivityViewController.dismiss(animated: true)
 
-  func stopRecording() throws {
-    if isGlobalRecording {
-      guard let controller = broadcastController else {
-        throw RecorderError.error(
-          name: "NO_BROADCAST",
-          message: "Global broadcast not active"
-        )
-      }
-      controller.finishBroadcast { [weak self] error in
-        if let err = error {
-          print("Finish broadcast failed:", err)
-        } else {
-          print("Broadcast finished successfully")
-          // Stop polling and try to retrieve file after a delay
-          self?.stopPolling()
-          DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-            self?.retrieveRecordedFile()
-          }
-        }
-      }
-    } else {
-      // Stop in-app recording
-      guard recorder.isRecording else {
-        throw RecorderError.error(
-          name: "SCREEN_RECORDING_INACTIVE",
-          message: "You called screen recording when it was not active."
-        )
-      }
-
-      let name = UUID().uuidString + ".mov"
-      let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-
-      recorder.stopRecording(withOutput: url) { [weak self] error in
-        if let error = error {
-          print("Error stopping recording: \(error.localizedDescription)")
-          return
-        }
-
-        let asset = AVURLAsset(url: url)
-        let duration = CMTimeGetSeconds(asset.duration)
-
-        self?.onRecordingFinishedCallback?(
-          ScreenRecordingFile(
-            path: url.absoluteString,
-            duration: duration
-          )
-        )
-      }
-    }
-  }
-  
-  // MARK: - Polling for Broadcast Extension Completion
-  
-  private func startPollingForCompletion() {
-    stopPolling() // Stop any existing timer
-    pollingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-      self?.checkForRecordingCompletion()
-    }
-  }
-  
-  private func stopPolling() {
-    pollingTimer?.invalidate()
-    pollingTimer = nil
-  }
-  
-  private func checkForRecordingCompletion() {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      return
-    }
-    
-    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
-    
-    // Check if notification file exists
-    if FileManager.default.fileExists(atPath: notificationFile.path) {
-      stopPolling()
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-        self?.retrieveRecordedFile()
-      }
-    }
-  }
-
-  private func retrieveRecordedFile() {
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      print("Could not access shared container")
+    if let error = error {
+      print("User cancelled or error occurred:", error)
+      recorder?.handleBroadcastCancelled(error: error)
       return
     }
 
-    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
-    
-    // Read the notification file
-    guard let jsonData = try? Data(contentsOf: notificationFile),
-          let recordingInfo = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-          let filePath = recordingInfo["filePath"] as? String else {
-      print("Could not read recording notification file")
+    guard let broadcastController = broadcastController else {
+      print("No broadcast controller received")
+      recorder?.handleBroadcastCancelled(error: nil)
       return
     }
-    
-    let fileURL = URL(fileURLWithPath: filePath)
-    
-    // Verify file exists
-    guard FileManager.default.fileExists(atPath: filePath) else {
-      print("Recording file does not exist at path: \(filePath)")
-      return
-    }
-    
-    // Get duration
-    let asset = AVURLAsset(url: fileURL)
-    let duration = CMTimeGetSeconds(asset.duration)
-    
-    // Call the callback
-    onRecordingFinishedCallback?(
-      ScreenRecordingFile(
-        path: fileURL.absoluteString,
-        duration: duration
-      )
-    )
-    
-    // Clean up notification file
-    try? FileManager.default.removeItem(at: notificationFile)
+
+    recorder?.handleBroadcastControllerReceived(broadcastController)
   }
+}
 
-  func clearFiles() throws {
-    // Clear both temporary files and shared container files
-    let tempDir = FileManager.default.temporaryDirectory
+// MARK: - Extensions
 
-    // Clear temp directory
-    do {
-      let tempFiles = try FileManager.default.contentsOfDirectory(
-        at: tempDir, includingPropertiesForKeys: nil)
-      for file in tempFiles where file.pathExtension == "mov" {
-        try FileManager.default.removeItem(at: file)
-      }
-    } catch {
-      print("Error clearing temp files: \(error.localizedDescription)")
+extension UIViewController {
+  func topMostViewController() -> UIViewController {
+    if let presented = presentedViewController {
+      return presented.topMostViewController()
     }
-
-    // Clear shared container
-    guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-          let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      return
+    if let navigation = self as? UINavigationController {
+      return navigation.visibleViewController?.topMostViewController() ?? self
     }
-    
-    let recordingsURL = containerURL.appendingPathComponent("recordings")
-    do {
-      let sharedFiles = try FileManager.default.contentsOfDirectory(
-        at: recordingsURL, includingPropertiesForKeys: nil)
-      for file in sharedFiles {
-        try FileManager.default.removeItem(at: file)
-      }
-    } catch {
-      print("Error clearing shared files: \(error.localizedDescription)")
+    if let tab = self as? UITabBarController {
+      return tab.selectedViewController?.topMostViewController() ?? self
     }
-    
-    // Clear preferences file
-    let preferencesFile = containerURL.appendingPathComponent("recording_preferences.json")
-    try? FileManager.default.removeItem(at: preferencesFile)
-    
-    // Clear notification file
-    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
-    try? FileManager.default.removeItem(at: notificationFile)
+    return self
   }
 }

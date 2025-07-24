@@ -1,30 +1,55 @@
 import { ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
-import fs from 'node:fs';
 import path from 'node:path';
-
 import {
   getBroadcastExtensionName,
-  getBroadcastExtensionSetupUIName,
   getBroadcastExtensionBundleIdentifier,
-  getBroadcastExtensionSetupUIBundleIdentifier,
 } from '../constants';
 import {
   writeBroadcastExtensionFiles,
   getBroadcastExtensionInfoFilePath,
   getBroadcastExtensionEntitlementsFilePath,
-  getBroadcastExtensionSetupUIInfoFilePath,
-  getBroadcastExtensionSetupUIEntitlementsFilePath,
   getMainExtensionPrivacyInfoFilePath,
-  getSetupUIPrivacyInfoFilePath,
   getBroadcastExtensionSampleHandlerPath,
-  getBroadcastExtensionSetupUIViewControllerPath,
-  getBroadcastExtensionStoryboardFilePath,
+  getBroadcastPickerViewControllerPath,
 } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
 
-// Helper to convert absolute paths into project-relative paths for Xcode
+/*───────────────────────────────────────────────────────────────────────────
+ Helper to convert absolute paths into project‑relative paths for Xcode
+───────────────────────────────────────────────────────────────────────────*/
 function makeRelative(absPath: string, projectRoot: string) {
   return path.relative(projectRoot, absPath).replace(/\\/g, '/');
+}
+
+/*───────────────────────────────────────────────────────────────────────────
+ ⚙️  Helper: ensure the phase UUID is listed in the target’s buildPhases
+───────────────────────────────────────────────────────────────────────────*/
+function ensurePhaseOnTarget(
+  pbx: any,
+  targetUUID: string,
+  phaseUUID: string,
+  comment = 'Frameworks'
+) {
+  const nativeTargets = pbx.getPBXObject('PBXNativeTarget');
+  const targetObj = nativeTargets[targetUUID];
+
+  if (!targetObj) {
+    console.warn(
+      `[withBroadcastExtension] ⚠️  Could not find PBXNativeTarget ${targetUUID}`
+    );
+    return;
+  }
+
+  const already = (targetObj.buildPhases ?? []).some(
+    (p: any) => (typeof p === 'object' ? p.value : p) === phaseUUID
+  );
+
+  if (!already) {
+    targetObj.buildPhases.push({ value: phaseUUID, comment });
+    console.log(
+      `[withBroadcastExtension] • Attached Frameworks phase ${phaseUUID} to target buildPhases`
+    );
+  }
 }
 
 export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
@@ -32,11 +57,14 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
   props
 ) => {
   console.log('[withBroadcastExtension] plugin invoked');
+
   return withXcodeProject(config, async (mod) => {
     console.log('[withBroadcastExtension] withXcodeProject callback');
 
+    /*───────────────────────────────────────────────────────────────────
+     Basic identifiers
+    ───────────────────────────────────────────────────────────────────*/
     const extensionName = getBroadcastExtensionName(props);
-    const setupUIName = getBroadcastExtensionSetupUIName(props);
     const projectRoot = mod.modRequest.platformProjectRoot;
     const scheme = mod.scheme! as string;
     const appIdentifier = mod.ios?.bundleIdentifier!;
@@ -44,22 +72,20 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
       appIdentifier,
       props
     );
-    const setupUIBundleIdentifier =
-      getBroadcastExtensionSetupUIBundleIdentifier(appIdentifier, props);
     const currentProjectVersion = mod.ios!.buildNumber || '1';
     const marketingVersion = mod.version!;
 
     console.log('[withBroadcastExtension] identifiers:', {
       extensionName,
-      setupUIName,
       projectRoot,
       scheme,
       appIdentifier,
       bundleIdentifier,
-      setupUIBundleIdentifier,
     });
 
-    // Write all extension files to disk
+    /*───────────────────────────────────────────────────────────────────
+     Write extension Swift + plist + xcprivacy files
+    ───────────────────────────────────────────────────────────────────*/
     console.log('[withBroadcastExtension] writing extension files');
     await writeBroadcastExtensionFiles(
       projectRoot,
@@ -75,7 +101,9 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
     const pbx = mod.modResults;
     console.log('[withBroadcastExtension] loaded PBX project');
 
-    // MAIN EXTENSION TARGET
+    /*───────────────────────────────────────────────────────────────────
+     MAIN EXTENSION TARGET
+    ───────────────────────────────────────────────────────────────────*/
     if (!pbx.pbxTargetByName(extensionName)) {
       console.log(`Adding target: ${extensionName}`);
       const target = pbx.addTarget(
@@ -83,12 +111,14 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
         'app_extension',
         extensionName
       );
+
+      /* Groups & basic build phases */
       pbx.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', target.uuid);
       pbx.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', target.uuid);
       const groupKey = pbx.pbxCreateGroup(extensionName, extensionName);
       console.log(`  groupKey: ${groupKey}`);
 
-      // Info.plist
+      /* Info.plist */
       const infoRel = makeRelative(
         getBroadcastExtensionInfoFilePath(projectRoot, props),
         projectRoot
@@ -96,7 +126,7 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
       console.log(`  Info.plist: ${infoRel}`);
       pbx.addFile(infoRel, groupKey);
 
-      // Entitlements
+      /* Entitlements */
       const entRel = makeRelative(
         getBroadcastExtensionEntitlementsFilePath(projectRoot, props),
         projectRoot
@@ -104,160 +134,98 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
       console.log(`  Entitlements: ${entRel}`);
       pbx.addFile(entRel, groupKey);
 
-      // Privacy (.xcprivacy) - use addFile instead of addResourceFile
+      /* Privacy (.xcprivacy) */
       const privRel = makeRelative(
         getMainExtensionPrivacyInfoFilePath(projectRoot, props),
         projectRoot
       );
       console.log(`  Privacy: ${privRel}`);
-      console.log(
-        '    exists on disk:',
-        fs.existsSync(path.join(projectRoot, privRel))
-      );
       try {
         pbx.addFile(privRel, groupKey);
         console.log('  -> added PrivacyInfo.xcprivacy');
       } catch (e) {
         console.error('Error adding PrivacyInfo.xcprivacy:', e);
-        console.error('    file:', privRel);
-        console.error('    groupKey:', groupKey);
         throw e;
       }
 
-      // SampleHandler.swift
+      /* Swift sources */
       const handlerRel = makeRelative(
         getBroadcastExtensionSampleHandlerPath(projectRoot, props),
         projectRoot
       );
-      console.log(`  SampleHandler: ${handlerRel}`);
-      // use addSourceFile to attach code to the target
       pbx.addSourceFile(handlerRel, { target: target.uuid }, groupKey);
 
-      // Storyboard (optional)
-      try {
-        const sbRel = makeRelative(
-          getBroadcastExtensionStoryboardFilePath(projectRoot, props),
-          projectRoot
+      const pickerRel = makeRelative(
+        getBroadcastPickerViewControllerPath(projectRoot, props),
+        projectRoot
+      );
+      pbx.addSourceFile(pickerRel, { target: target.uuid }, groupKey);
+
+      /*───────────────────────────
+        THIS SECTION – frameworks
+      ───────────────────────────*/
+      const replayKitFile = pbx.addFramework('ReplayKit.framework', {
+        target: target.uuid,
+        sourceTree: 'SDKROOT',
+        link: true,
+      });
+
+      if (replayKitFile) {
+        console.log(
+          `[withBroadcastExtension] • ReplayKit.framework linked – fileRef: ${replayKitFile.fileRef}`
         );
-        console.log(`  Storyboard: ${sbRel}`);
-        // use addResourceFile for storyboards
-        pbx.addResourceFile(sbRel, { target: target.uuid }, groupKey);
-      } catch {
-        console.log('  No storyboard found');
+      } else {
+        console.log(
+          '[withBroadcastExtension] • ReplayKit.framework was already linked – skipping'
+        );
       }
 
-      // Storyboard (optional)
-      try {
-        const sbRel = makeRelative(
-          getBroadcastExtensionStoryboardFilePath(projectRoot, props),
-          projectRoot
-        );
-        console.log(`  Storyboard: ${sbRel}`);
-        pbx.addFile(sbRel, { target: target.uuid });
-      } catch {
-        console.log('  No storyboard found');
+      /* Attach / locate the frameworks phase */
+      const fwSection = pbx.getPBXObject('PBXFrameworksBuildPhase');
+      const buildFileUUID = replayKitFile.uuid;
+      let phaseIdWithReplayKit: string | undefined;
+
+      for (const [uuid, phase] of Object.entries(fwSection)) {
+        const files: any[] | undefined = (phase as any).files;
+        if (
+          Array.isArray(files) &&
+          files.some(
+            (f) => (typeof f === 'object' ? f.value : f) === buildFileUUID
+          )
+        ) {
+          phaseIdWithReplayKit = uuid;
+          /* 🔧 NEW: make sure the phase is on the target */
+          ensurePhaseOnTarget(
+            pbx,
+            target.uuid,
+            phaseIdWithReplayKit,
+            'Frameworks'
+          );
+
+          console.log(
+            `[withBroadcastExtension] • ReplayKit.framework now lives in PBXFrameworksBuildPhase ${uuid}`
+          );
+          console.log(
+            `[withBroadcastExtension]   phase files:`,
+            files.map((f) => (typeof f === 'object' ? f.comment : f)).join(', ')
+          );
+          break;
+        }
       }
+
+      if (!phaseIdWithReplayKit) {
+        console.warn(
+          '[withBroadcastExtension] ⚠️  Could not locate a PBXFrameworksBuildPhase containing ReplayKit.framework – please inspect project.pbxproj manually.'
+        );
+      }
+      /*────────────── END THIS SECTION ──────────────*/
     } else {
       console.log(`Target ${extensionName} already exists`);
     }
 
-    // SETUP UI EXTENSION TARGET
-    if (!pbx.pbxTargetByName(setupUIName)) {
-      console.log(`Adding setup UI target: ${setupUIName}`);
-      const setupTarget = pbx.addTarget(
-        setupUIName,
-        'app_extension',
-        setupUIName
-      );
-      pbx.addBuildPhase(
-        [],
-        'PBXSourcesBuildPhase',
-        'Sources',
-        setupTarget.uuid
-      );
-      pbx.addBuildPhase(
-        [],
-        'PBXResourcesBuildPhase',
-        'Resources',
-        setupTarget.uuid
-      );
-      const setupGroupKey = pbx.pbxCreateGroup(setupUIName, setupUIName);
-      console.log(`  setupGroupKey: ${setupGroupKey}`);
-
-      // Setup UI Info.plist
-      const setupInfoRel = makeRelative(
-        getBroadcastExtensionSetupUIInfoFilePath(projectRoot, props),
-        projectRoot
-      );
-      console.log(`  Setup UI Info.plist: ${setupInfoRel}`);
-      pbx.addFile(setupInfoRel, setupGroupKey);
-
-      // Setup UI entitlements
-      const setupEntRel = makeRelative(
-        getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot, props),
-        projectRoot
-      );
-      console.log(`  Setup UI Entitlements: ${setupEntRel}`);
-      pbx.addFile(setupEntRel, setupGroupKey);
-
-      // Setup UI Privacy (.xcprivacy)
-      const setupPrivRel = makeRelative(
-        getSetupUIPrivacyInfoFilePath(projectRoot, props),
-        projectRoot
-      );
-      console.log(`  Setup UI Privacy: ${setupPrivRel}`);
-      console.log(
-        '    exists on disk:',
-        fs.existsSync(path.join(projectRoot, setupPrivRel))
-      );
-      try {
-        pbx.addFile(setupPrivRel, setupGroupKey);
-        console.log('  -> added Setup UI PrivacyInfo.xcprivacy');
-      } catch (e) {
-        console.error('Error adding Setup UI PrivacyInfo.xcprivacy:', e);
-        console.error('    file:', setupPrivRel);
-        console.error('    setupGroupKey:', setupGroupKey);
-        throw e;
-      }
-
-      // BroadcastSetupViewController.swift
-      const vcRel = makeRelative(
-        getBroadcastExtensionSetupUIViewControllerPath(projectRoot, props),
-        projectRoot
-      );
-      console.log(`  ViewController: ${vcRel}`);
-      // use addSourceFile for view controller code
-      pbx.addSourceFile(vcRel, { target: setupTarget.uuid }, setupGroupKey);
-
-      // Storyboard (optional)
-      try {
-        const sbRel = makeRelative(
-          getBroadcastExtensionStoryboardFilePath(projectRoot, props),
-          projectRoot
-        );
-        console.log(`  Setup UI Storyboard: ${sbRel}`);
-        // use addResourceFile for storyboards
-        pbx.addResourceFile(sbRel, { target: setupTarget.uuid }, setupGroupKey);
-      } catch {
-        console.log('  No setup UI storyboard found');
-      }
-
-      // Storyboard (optional)
-      try {
-        const sbRel = makeRelative(
-          getBroadcastExtensionStoryboardFilePath(projectRoot, props),
-          projectRoot
-        );
-        console.log(`  Setup UI Storyboard: ${sbRel}`);
-        pbx.addFile(sbRel, { target: setupTarget.uuid });
-      } catch {
-        console.log('  No setup UI storyboard found');
-      }
-    } else {
-      console.log(`Setup UI target ${setupUIName} already exists`);
-    }
-
-    // Configure build settings
+    /*───────────────────────────────────────────────────────────────────
+     Build settings tweaks
+    ───────────────────────────────────────────────────────────────────*/
     console.log('[withBroadcastExtension] configuring build settings');
     const configs = pbx.pbxXCBuildConfigurationSection();
     for (const key in configs) {
@@ -284,32 +252,16 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
         bs.SWIFT_VERSION = '5.0';
         bs.TARGETED_DEVICE_FAMILY = '"1,2"';
       }
-
-      if (bs.PRODUCT_NAME === `"${setupUIName}"`) {
-        console.log(`  Applying build settings for ${setupUIName}`);
-        bs.CLANG_ENABLE_MODULES = 'YES';
-        bs.INFOPLIST_FILE = `"${makeRelative(
-          getBroadcastExtensionSetupUIInfoFilePath(projectRoot, props),
-          projectRoot
-        )}"`;
-        bs.CODE_SIGN_ENTITLEMENTS = `"${makeRelative(
-          getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot, props),
-          projectRoot
-        )}"`;
-        bs.CODE_SIGN_STYLE = 'Automatic';
-        bs.CURRENT_PROJECT_VERSION = `"${currentProjectVersion}"`;
-        bs.GENERATE_INFOPLIST_FILE = 'YES';
-        bs.MARKETING_VERSION = `"${marketingVersion}"`;
-        bs.PRODUCT_BUNDLE_IDENTIFIER = `"${setupUIBundleIdentifier}"`;
-        bs.SWIFT_EMIT_LOC_STRINGS = 'YES';
-        bs.SWIFT_VERSION = '5.0';
-        bs.TARGETED_DEVICE_FAMILY = '"1,2"';
-      }
     }
 
+    /*───────────────────────────────────────────────────────────────────
+     Debug dump for quick inspection
+    ───────────────────────────────────────────────────────────────────*/
     console.log(
-      '[withBroadcastExtension] Xcode project modifications complete'
+      '[withBroadcastExtension] DEBUG – FrameworksBuildPhase section:',
+      JSON.stringify(pbx.getPBXObject('PBXFrameworksBuildPhase'), null, 2)
     );
+
     return mod;
   });
 };
