@@ -27,16 +27,7 @@ export interface NitroScreenRecorder
     onRecordingFinished: (file: ScreenRecordingFile) => void
     // onRecordingError: (error: string) => void
   ): void;
-  startGlobalRecording(
-    enableMic: boolean,
-    enableCamera: boolean,
-    onRecordingFinished: (file: ScreenRecordingFile) => void
-    // onRecordingError: (error: string) => void
-  ): void;
-  // test(
-  //   onNewUserJoined: (user: User) => void,
-  //   onAnotherUserJoined: (user: User) => void
-  // ): void;
-  stopRecording(): void;
+  startGlobalRecording(): void;
+  stopInAppRecording(): void;
   clearFiles(): void;
 }

@@ -2,20 +2,20 @@ import { ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
 import path from 'node:path';
 import {
   broadcastExtensionName,
-  broadcastExtensionSetupUIName,
+  // broadcastExtensionSetupUIName,
   getBroadcastExtensionBundleIdentifier,
-  getBroadcastExtensionSetupUIBundleIdentifier,
+  // getBroadcastExtensionSetupUIBundleIdentifier,
 } from '../constants';
 import {
   writeBroadcastExtensionFiles,
   getBroadcastExtensionInfoFilePath,
   getBroadcastExtensionEntitlementsFilePath,
-  getBroadcastExtensionSetupUIInfoFilePath,
-  getBroadcastExtensionSetupUIEntitlementsFilePath,
+  // getBroadcastExtensionSetupUIInfoFilePath,
+  // getBroadcastExtensionSetupUIEntitlementsFilePath,
   getMainExtensionPrivacyInfoFilePath,
-  getSetupUIPrivacyInfoFilePath,
+  // getSetupUIPrivacyInfoFilePath,
   getBroadcastExtensionSampleHandlerPath,
-  getBroadcastExtensionSetupUIViewControllerPath,
+  // getBroadcastExtensionSetupUIViewControllerPath,
 } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
 
@@ -70,26 +70,24 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
      Basic identifiers
     ───────────────────────────────────────────────────────────────────*/
     const extensionName = broadcastExtensionName;
-    const setupUIName = broadcastExtensionSetupUIName;
+    // const setupUIName = broadcastExtensionSetupUIName;
     const projectRoot = mod.modRequest.platformProjectRoot;
     const scheme = mod.scheme! as string;
     const appIdentifier = mod.ios?.bundleIdentifier!;
     const bundleIdentifier =
       getBroadcastExtensionBundleIdentifier(appIdentifier);
-    const setupUIBundleIdentifier =
-      getBroadcastExtensionSetupUIBundleIdentifier(appIdentifier);
+    // const setupUIBundleIdentifier =
+    // getBroadcastExtensionSetupUIBundleIdentifier(appIdentifier);
 
     const currentProjectVersion = mod.ios!.buildNumber || '1';
     const marketingVersion = mod.version!;
 
     console.log('[withBroadcastExtension] identifiers:', {
       extensionName,
-      setupUIName,
       projectRoot,
       scheme,
       appIdentifier,
       bundleIdentifier,
-      setupUIBundleIdentifier,
     });
 
     /*───────────────────────────────────────────────────────────────────
@@ -173,90 +171,90 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
     /*───────────────────────────────────────────────────────────────────
      SETUP UI EXTENSION TARGET  (BroadcastExtensionSetupUI)
     ───────────────────────────────────────────────────────────────────*/
-    if (!pbx.pbxTargetByName(setupUIName)) {
-      console.log(`Adding target: ${setupUIName}`);
-      const target = pbx.addTarget(setupUIName, 'app_extension', setupUIName);
+    // if (!pbx.pbxTargetByName(setupUIName)) {
+    //   console.log(`Adding target: ${setupUIName}`);
+    //   const target = pbx.addTarget(setupUIName, 'app_extension', setupUIName);
 
-      /* Groups & basic build phases */
-      pbx.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', target.uuid);
-      pbx.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', target.uuid);
-      const groupKey = pbx.pbxCreateGroup(setupUIName, setupUIName); // ← fixed
-      console.log(`  groupKey: ${groupKey}`);
+    //   /* Groups & basic build phases */
+    //   pbx.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', target.uuid);
+    //   pbx.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', target.uuid);
+    //   const groupKey = pbx.pbxCreateGroup(setupUIName, setupUIName); // ← fixed
+    //   console.log(`  groupKey: ${groupKey}`);
 
-      /* Info.plist + Entitlements + Privacy */
-      pbx.addFile(
-        makeRelative(
-          getBroadcastExtensionSetupUIInfoFilePath(projectRoot),
-          projectRoot
-        ),
-        groupKey
-      );
-      pbx.addFile(
-        makeRelative(
-          getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot),
-          projectRoot
-        ),
-        groupKey
-      );
-      pbx.addFile(
-        makeRelative(getSetupUIPrivacyInfoFilePath(projectRoot), projectRoot),
-        groupKey
-      );
+    //   /* Info.plist + Entitlements + Privacy */
+    //   pbx.addFile(
+    //     makeRelative(
+    //       getBroadcastExtensionSetupUIInfoFilePath(projectRoot),
+    //       projectRoot
+    //     ),
+    //     groupKey
+    //   );
+    //   pbx.addFile(
+    //     makeRelative(
+    //       getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot),
+    //       projectRoot
+    //     ),
+    //     groupKey
+    //   );
+    //   pbx.addFile(
+    //     makeRelative(getSetupUIPrivacyInfoFilePath(projectRoot), projectRoot),
+    //     groupKey
+    //   );
 
-      /* Swift + UI sources */
-      pbx.addSourceFile(
-        makeRelative(
-          getBroadcastExtensionSetupUIViewControllerPath(projectRoot),
-          projectRoot
-        ),
-        { target: target.uuid },
-        groupKey
-      );
-      pbx.addSourceFile(
-        makeRelative(
-          getBroadcastExtensionSetupUIViewControllerPath(projectRoot),
-          projectRoot
-        ),
-        { target: target.uuid },
-        groupKey
-      );
+    //   /* Swift + UI sources */
+    //   pbx.addSourceFile(
+    //     makeRelative(
+    //       getBroadcastExtensionSetupUIViewControllerPath(projectRoot),
+    //       projectRoot
+    //     ),
+    //     { target: target.uuid },
+    //     groupKey
+    //   );
+    //   pbx.addSourceFile(
+    //     makeRelative(
+    //       getBroadcastExtensionSetupUIViewControllerPath(projectRoot),
+    //       projectRoot
+    //     ),
+    //     { target: target.uuid },
+    //     groupKey
+    //   );
 
-      // /* (Optional) Storyboard resource */
-      // const storyboardRel = makeRelative(
-      //   getBroadcastExtensionStoryboardFilePath(projectRoot, props),
-      //   projectRoot
-      // );
-      // pbx.addFile(storyboardRel, groupKey);
-      // pbx.addResourceFile(storyboardRel, { target: target.uuid }, groupKey);
+    //   // /* (Optional) Storyboard resource */
+    //   // const storyboardRel = makeRelative(
+    //   //   getBroadcastExtensionStoryboardFilePath(projectRoot, props),
+    //   //   projectRoot
+    //   // );
+    //   // pbx.addFile(storyboardRel, groupKey);
+    //   // pbx.addResourceFile(storyboardRel, { target: target.uuid }, groupKey);
 
-      /*──────── frameworks: ReplayKit & UIKit ────────*/
-      const frameworks = ['ReplayKit.framework', 'UIKit.framework'];
-      const added = frameworks
-        .map((fw) =>
-          pbx.addFramework(fw, {
-            target: target.uuid,
-            sourceTree: 'SDKROOT',
-            link: true,
-          })
-        )
-        .filter(Boolean);
+    //   /*──────── frameworks: ReplayKit & UIKit ────────*/
+    //   const frameworks = ['ReplayKit.framework', 'UIKit.framework'];
+    //   const added = frameworks
+    //     .map((fw) =>
+    //       pbx.addFramework(fw, {
+    //         target: target.uuid,
+    //         sourceTree: 'SDKROOT',
+    //         link: true,
+    //       })
+    //     )
+    //     .filter(Boolean);
 
-      added.forEach((f: any) => console.log(`[SetupUI] linked ${f.basename}`));
+    //   added.forEach((f: any) => console.log(`[SetupUI] linked ${f.basename}`));
 
-      /* attach phase */
-      if (added.length) {
-        const fwSection = pbx.getPBXObject('PBXFrameworksBuildPhase');
-        const bfUuid = added[0].uuid;
-        const phaseId = Object.entries(fwSection).find(([_, p]: any) =>
-          (p.files ?? []).some(
-            (file: any) =>
-              (typeof file === 'object' ? file.value : file) === bfUuid
-          )
-        )?.[0];
-        if (phaseId)
-          ensurePhaseOnTarget(pbx, target.uuid, phaseId, 'Frameworks');
-      }
-    }
+    //   /* attach phase */
+    //   if (added.length) {
+    //     const fwSection = pbx.getPBXObject('PBXFrameworksBuildPhase');
+    //     const bfUuid = added[0].uuid;
+    //     const phaseId = Object.entries(fwSection).find(([_, p]: any) =>
+    //       (p.files ?? []).some(
+    //         (file: any) =>
+    //           (typeof file === 'object' ? file.value : file) === bfUuid
+    //       )
+    //     )?.[0];
+    //     if (phaseId)
+    //       ensurePhaseOnTarget(pbx, target.uuid, phaseId, 'Frameworks');
+    //   }
+    // }
 
     /*───────────────────────────────────────────────────────────────────
      Build‑settings tweaks for BroadcastExtension only.
@@ -288,26 +286,26 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
         bs.TARGETED_DEVICE_FAMILY = '"1,2"';
       }
 
-      if (bs.PRODUCT_NAME === `"${setupUIName}"`) {
-        console.log(`  Applying build settings for ${setupUIName}`);
-        bs.CLANG_ENABLE_MODULES = 'YES';
-        bs.INFOPLIST_FILE = `"${makeRelative(
-          getBroadcastExtensionSetupUIInfoFilePath(projectRoot),
-          projectRoot
-        )}"`;
-        bs.CODE_SIGN_ENTITLEMENTS = `"${makeRelative(
-          getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot),
-          projectRoot
-        )}"`;
-        bs.CODE_SIGN_STYLE = 'Automatic';
-        bs.CURRENT_PROJECT_VERSION = `"${currentProjectVersion}"`;
-        bs.GENERATE_INFOPLIST_FILE = 'YES';
-        bs.MARKETING_VERSION = `"${marketingVersion}"`;
-        bs.PRODUCT_BUNDLE_IDENTIFIER = `"${setupUIBundleIdentifier}"`;
-        bs.SWIFT_EMIT_LOC_STRINGS = 'YES';
-        bs.SWIFT_VERSION = '5.0';
-        bs.TARGETED_DEVICE_FAMILY = '"1,2"';
-      }
+      // if (bs.PRODUCT_NAME === `"${setupUIName}"`) {
+      //   console.log(`  Applying build settings for ${setupUIName}`);
+      //   bs.CLANG_ENABLE_MODULES = 'YES';
+      //   bs.INFOPLIST_FILE = `"${makeRelative(
+      //     getBroadcastExtensionSetupUIInfoFilePath(projectRoot),
+      //     projectRoot
+      //   )}"`;
+      //   bs.CODE_SIGN_ENTITLEMENTS = `"${makeRelative(
+      //     getBroadcastExtensionSetupUIEntitlementsFilePath(projectRoot),
+      //     projectRoot
+      //   )}"`;
+      //   bs.CODE_SIGN_STYLE = 'Automatic';
+      //   bs.CURRENT_PROJECT_VERSION = `"${currentProjectVersion}"`;
+      //   bs.GENERATE_INFOPLIST_FILE = 'YES';
+      //   bs.MARKETING_VERSION = `"${marketingVersion}"`;
+      //   bs.PRODUCT_BUNDLE_IDENTIFIER = `"${setupUIBundleIdentifier}"`;
+      //   bs.SWIFT_EMIT_LOC_STRINGS = 'YES';
+      //   bs.SWIFT_VERSION = '5.0';
+      //   bs.TARGETED_DEVICE_FAMILY = '"1,2"';
+      // }
     }
 
     return mod;

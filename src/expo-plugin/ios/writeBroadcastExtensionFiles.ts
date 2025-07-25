@@ -6,8 +6,8 @@ import {
   getAppGroup,
   broadcastExtensionName,
   broadcastExtensionSampleHandlerFileName,
-  broadcastExtensionSetupUIViewControllerFileName,
-  broadcastExtensionSetupUIName,
+  // broadcastExtensionSetupUIViewControllerFileName,
+  // broadcastExtensionSetupUIName,
 } from '../constants';
 import { ConfigProps } from '../@types';
 
@@ -31,21 +31,21 @@ export async function writeBroadcastExtensionFiles(
   await fs.promises.writeFile(mainInfoPlistFile, mainInfoPlistContet);
 
   // BroadcastExtensionSetupUI/Info.plist
-  const setupUIInfoPlistFilePath =
-    getBroadcastExtensionSetupUIInfoFilePath(platformProjectRoot);
+  // const setupUIInfoPlistFilePath =
+  //   getBroadcastExtensionSetupUIInfoFilePath(platformProjectRoot);
 
-  const setupUIInfoPlistContent = getBroadcastExtensionSetupUIInfoContent(
-    appName,
-    appIdentifier,
-    props
-  );
-  await fs.promises.mkdir(path.dirname(setupUIInfoPlistFilePath), {
-    recursive: true,
-  });
-  await fs.promises.writeFile(
-    setupUIInfoPlistFilePath,
-    setupUIInfoPlistContent
-  );
+  // const setupUIInfoPlistContent = getBroadcastExtensionSetupUIInfoContent(
+  //   appName,
+  //   appIdentifier,
+  //   props
+  // );
+  // await fs.promises.mkdir(path.dirname(setupUIInfoPlistFilePath), {
+  //   recursive: true,
+  // });
+  // await fs.promises.writeFile(
+  //   setupUIInfoPlistFilePath,
+  //   setupUIInfoPlistContent
+  // );
 
   // BroadcastExtension.entitlements
   const mainEntitlementsFilePath =
@@ -61,25 +61,25 @@ export async function writeBroadcastExtensionFiles(
   );
 
   // BroadcastExtensionSetupUI.entitlements
-  const setupUIEntitlementsFilePath =
-    getBroadcastExtensionSetupUIEntitlementsFilePath(platformProjectRoot);
-  const setupUIEntitlementsContent =
-    getBroadcastExtensionSetupUIEntitlementsContent(appIdentifier, props);
-  await fs.promises.writeFile(
-    setupUIEntitlementsFilePath,
-    setupUIEntitlementsContent
-  );
+  // const setupUIEntitlementsFilePath =
+  //   getBroadcastExtensionSetupUIEntitlementsFilePath(platformProjectRoot);
+  // const setupUIEntitlementsContent =
+  //   getBroadcastExtensionSetupUIEntitlementsContent(appIdentifier, props);
+  // await fs.promises.writeFile(
+  //   setupUIEntitlementsFilePath,
+  //   setupUIEntitlementsContent
+  // );
 
   // PrivacyInfo.xcprivacy
   const mainPrivacyFilePath =
     getMainExtensionPrivacyInfoFilePath(platformProjectRoot);
 
-  const setupUIPrivacyFilePath =
-    getSetupUIPrivacyInfoFilePath(platformProjectRoot);
+  // const setupUIPrivacyFilePath =
+  //   getSetupUIPrivacyInfoFilePath(platformProjectRoot);
 
   const privacyContent = getPrivacyInfoContent();
   await fs.promises.writeFile(mainPrivacyFilePath, privacyContent);
-  await fs.promises.writeFile(setupUIPrivacyFilePath, privacyContent);
+  // await fs.promises.writeFile(setupUIPrivacyFilePath, privacyContent);
 
   // MainInterface.storyboard;
   // const storyboardFilePath = getBroadcastExtensionStoryboardFilePath(
@@ -100,15 +100,15 @@ export async function writeBroadcastExtensionFiles(
   await fs.promises.writeFile(sampleHandlerFilePath, sampleHandlerContent);
 
   // BroadcastUISetupViewController.swift
-  const viewControllerFilePath =
-    getBroadcastExtensionSetupUIViewControllerPath(platformProjectRoot);
-  const viewControllerContent =
-    getBroadcastExtensionSetupUIViewControllerContent(
-      scheme,
-      getAppGroup(appIdentifier, props)
-    );
+  // const viewControllerFilePath =
+  //   getBroadcastExtensionSetupUIViewControllerPath(platformProjectRoot);
+  // const viewControllerContent =
+  //   getBroadcastExtensionSetupUIViewControllerContent(
+  //     scheme,
+  //     getAppGroup(appIdentifier, props)
+  //   );
 
-  await fs.promises.writeFile(viewControllerFilePath, viewControllerContent);
+  // await fs.promises.writeFile(viewControllerFilePath, viewControllerContent);
 }
 
 //: [root]/ios/BroadcastExtension/BroadcastExtension.entitlements
@@ -141,15 +141,15 @@ export function getBroadcastExtensionEntitlementsContent(
 }
 
 //: [root]/ios/BroadcastExtensionSetupUI/BroadcastExtensionSetupUI.entitlements
-export function getBroadcastExtensionSetupUIEntitlementsFilePath(
-  platformProjectRoot: string
-) {
-  return path.join(
-    platformProjectRoot,
-    broadcastExtensionSetupUIName,
-    `${broadcastExtensionSetupUIName}.entitlements`
-  );
-}
+// export function getBroadcastExtensionSetupUIEntitlementsFilePath(
+//   platformProjectRoot: string
+// ) {
+//   return path.join(
+//     platformProjectRoot,
+//     broadcastExtensionSetupUIName,
+//     `${broadcastExtensionSetupUIName}.entitlements`
+//   );
+// }
 
 export function getBroadcastExtensionSetupUIEntitlements(
   appIdentifier: string,
@@ -202,15 +202,15 @@ export function getBroadcastExtensionInfoContent(
   });
 }
 
-export function getBroadcastExtensionSetupUIInfoFilePath(
-  platformProjectRoot: string
-) {
-  return path.join(
-    platformProjectRoot,
-    broadcastExtensionSetupUIName,
-    'Info.plist'
-  );
-}
+// export function getBroadcastExtensionSetupUIInfoFilePath(
+//   platformProjectRoot: string
+// ) {
+//   return path.join(
+//     platformProjectRoot,
+//     broadcastExtensionSetupUIName,
+//     'Info.plist'
+//   );
+// }
 
 export function getBroadcastExtensionSetupUIInfoContent(
   appName: ConfigPlugin<ConfigProps>['name'],
@@ -251,13 +251,13 @@ export function getMainExtensionPrivacyInfoFilePath(
 }
 
 // : [root]/ios/BroadcastExtensionSetupUI/PrivacyInfo.xcprivacy
-export function getSetupUIPrivacyInfoFilePath(platformProjectRoot: string) {
-  return path.join(
-    platformProjectRoot,
-    broadcastExtensionSetupUIName,
-    'PrivacyInfo.xcprivacy'
-  );
-}
+// export function getSetupUIPrivacyInfoFilePath(platformProjectRoot: string) {
+//   return path.join(
+//     platformProjectRoot,
+//     broadcastExtensionSetupUIName,
+//     'PrivacyInfo.xcprivacy'
+//   );
+// }
 
 export function getPrivacyInfoContent() {
   return plist.build({
@@ -361,15 +361,15 @@ export function getBroadcastExtensionSampleHandlerContent(
 }
 
 // : [root]/ios/BroadcastExensionSetupUI/BroacastSetupViewController.swift
-export function getBroadcastExtensionSetupUIViewControllerPath(
-  platformProjectRoot: string
-) {
-  return path.join(
-    platformProjectRoot,
-    broadcastExtensionSetupUIName,
-    broadcastExtensionSetupUIViewControllerFileName
-  );
-}
+// export function getBroadcastExtensionSetupUIViewControllerPath(
+//   platformProjectRoot: string
+// ) {
+//   return path.join(
+//     platformProjectRoot,
+//     broadcastExtensionSetupUIName,
+//     broadcastExtensionSetupUIViewControllerFileName
+//   );
+// }
 
 export function getBroadcastExtensionSetupUIViewControllerContent(
   scheme: string,

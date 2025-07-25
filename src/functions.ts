@@ -38,19 +38,10 @@ export async function startInAppRecording(
   );
 }
 
-export async function startGlobalRecording(
-  options: RecordingOptions,
-  onRecordingFinished: (file: ScreenRecordingFile) => void
-  // onRecordingError: (message: string) => void
-): Promise<void> {
-  return NitroScreenRecorderHybridObject.startGlobalRecording(
-    options.enableMic,
-    options.enableCamera,
-    onRecordingFinished
-    // onRecordingError
-  );
+export async function startGlobalRecording(): Promise<void> {
+  return NitroScreenRecorderHybridObject.startGlobalRecording();
 }
 
-export function stopRecording(): void {
-  return NitroScreenRecorderHybridObject.stopRecording();
+export function stopInAppRecording(): void {
+  return NitroScreenRecorderHybridObject.stopInAppRecording();
 }

@@ -12,22 +12,17 @@ typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   private let recorder = RPScreenRecorder.shared()
-
-  private var broadcastDelegate: BroadcastDelegate?
   private var activeBroadcastController: RPBroadcastController?
 
   private var onRecordingFinishedCallback: RecordingFinishedCallback?
   private var isGlobalRecording = false
   private var globalRecordingId: String?
 
-  private var broadcastExtensionBundleID: String?
-
   // Polling timer for checking broadcast extension completion
   private var pollingTimer: Timer?
 
   override init() {
     super.init()
-    self.broadcastExtensionBundleID = "nitroscreenrecorderexample.example.broadcast-extension"
   }
 
   deinit {
@@ -127,18 +122,15 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
     return appGroupIdentifier
   }
-  
-  private func getExtensionBundleId() throws -> String {
-    let extensionBundleId: String? =
-      Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String
 
-    guard let extensionBundleId = extensionBundleId else {
-      throw RecorderError.error(
-        name: "APP_GROUP_IDENTIFIER_MISSING",
-        message: "appGroupIdentifier is nil"
-      )
+  private func getBroadcastExtensionBundleId() -> String? {
+    guard
+      let mainAppBundleId = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier")
+        as? String
+    else {
+      return nil
     }
-    return extensionBundleId
+    return "\(mainAppBundleId).broadcast-extension"
   }
 
   func startInAppRecording(
@@ -166,12 +158,8 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  func startGlobalRecording(
-    enableMic: Bool,
-    enableCamera: Bool,
-    onRecordingFinished: @escaping RecordingFinishedCallback
-  ) throws {
-    self.onRecordingFinishedCallback = onRecordingFinished
+  func startGlobalRecording() throws {
+
     self.isGlobalRecording = true
     self.globalRecordingId = UUID().uuidString
 
@@ -182,9 +170,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
     }
 
-    // Store preferences for the broadcast extension
-    try storeRecordingPreferences(enableMic: enableMic, enableCamera: enableCamera)
-
     // Use direct broadcast controller creation
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
@@ -194,12 +179,12 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
         frame: CGRect(x: 0, y: 0, width: 50, height: 50))
 
       // Set preferred extension if you have one
-      if let bundleID = self.broadcastExtensionBundleID {
+      if let bundleID = getBroadcastExtensionBundleId() {
         broadcastPicker.preferredExtension = bundleID
       }
 
       // Style the picker (optional)
-      broadcastPicker.showsMicrophoneButton = false
+      broadcastPicker.showsMicrophoneButton = true
 
       // Add to the current view temporarily
       guard
@@ -233,76 +218,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  private func storeRecordingPreferences(enableMic: Bool, enableCamera: Bool) throws {
-    let appGroupId = try getAppGroupIdentifier()
-
-    guard
-      let containerURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: appGroupId
-      )
-    else {
-      throw RecorderError.error(
-        name: "APP_GROUP_ACCESS_FAILED",
-        message: "Could not access app group container"
-      )
-    }
-
-    let preferencesFile = containerURL.appendingPathComponent("recording_preferences.json")
-
-    let preferences: [String: Any] = [
-      "enableMicrophone": enableMic,
-      "enableCamera": enableCamera,
-      "recordingId": globalRecordingId ?? UUID().uuidString,
-      "timestamp": Date().timeIntervalSince1970,
-    ]
-
-    do {
-      let jsonData = try JSONSerialization.data(withJSONObject: preferences)
-      try jsonData.write(to: preferencesFile)
-      print("Recording preferences stored successfully")
-    } catch {
-      throw RecorderError.error(
-        name: "PREFERENCES_WRITE_FAILED",
-        message: "Failed to store recording preferences: \(error.localizedDescription)"
-      )
-    }
-  }
-
-  func handleBroadcastControllerReceived(_ broadcastController: RPBroadcastController) {
-    self.activeBroadcastController = broadcastController
-    print("Made it here")
-    // Start the broadcast immediately
-    broadcastController.startBroadcast { [weak self] error in
-      if let error = error {
-        print("Failed to start broadcast:", error)
-        self?.handleBroadcastError(error)
-      } else {
-        print("Broadcast started successfully!")
-        let url = broadcastController.broadcastURL
-        print("Broadcast URL: \(url)")
-        self?.startPollingForCompletion()
-      }
-    }
-  }
-
-  func handleBroadcastCancelled(error: Error?) {
-    print("Broadcast was cancelled")
-    broadcastDelegate = nil
-    activeBroadcastController = nil
-    isGlobalRecording = false
-  }
-
-  func handleBroadcastError(_ error: Error) {
-    print("Broadcast error:", error)
-    // Call callback with error
-    let errorFile = ScreenRecordingFile(
-      path: "",
-      duration: 0,
-    )
-    onRecordingFinishedCallback?(errorFile)
-  }
-
-  func stopRecording() {
+  func stopInAppRecording() {
     activeBroadcastController?.finishBroadcast { [weak self] error in
       if let error = error {
         print("Error stopping broadcast:", error)
@@ -315,7 +231,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   private func cleanupRecording() {
     activeBroadcastController = nil
-    broadcastDelegate = nil
     isGlobalRecording = false
   }
 
@@ -390,53 +305,5 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     } else {
       completion(false)
     }
-  }
-}
-
-private class BroadcastDelegate: NSObject, RPBroadcastActivityViewControllerDelegate {
-  weak var recorder: NitroScreenRecorder?
-
-  init(recorder: NitroScreenRecorder) {
-    self.recorder = recorder
-    super.init()
-  }
-
-  func broadcastActivityViewController(
-    _ broadcastActivityViewController: RPBroadcastActivityViewController,
-    didFinishWith broadcastController: RPBroadcastController?,
-    error: Error?
-  ) {
-    broadcastActivityViewController.dismiss(animated: true)
-
-    if let error = error {
-      print("User cancelled or error occurred:", error)
-      recorder?.handleBroadcastCancelled(error: error)
-      return
-    }
-
-    guard let broadcastController = broadcastController else {
-      print("No broadcast controller received")
-      recorder?.handleBroadcastCancelled(error: nil)
-      return
-    }
-
-    recorder?.handleBroadcastControllerReceived(broadcastController)
-  }
-}
-
-// MARK: - Extensions
-
-extension UIViewController {
-  func topMostViewController() -> UIViewController {
-    if let presented = presentedViewController {
-      return presented.topMostViewController()
-    }
-    if let navigation = self as? UINavigationController {
-      return navigation.visibleViewController?.topMostViewController() ?? self
-    }
-    if let tab = self as? UITabBarController {
-      return tab.selectedViewController?.topMostViewController() ?? self
-    }
-    return self
   }
 }

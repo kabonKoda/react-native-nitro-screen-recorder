@@ -132,7 +132,6 @@
     "source": "src",
     "output": "lib",
     "targets": [
-
       [
         "custom",
         {
@@ -146,7 +145,7 @@
           "esm": true
         }
       ],
-      "typescript",     
+      "typescript",
       "commonjs"
     ]
   },

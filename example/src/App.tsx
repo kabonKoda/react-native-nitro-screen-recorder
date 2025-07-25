@@ -1,18 +1,13 @@
 import { View, StyleSheet, Button } from 'react-native';
 import * as ScreenRecorder from 'react-native-nitro-screen-recorder';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { useState } from 'react';
-
-const RECORDING_OPTIONS: ScreenRecorder.RecordingOptions = {
-  enableCamera: true,
-  enableMic: true,
-};
+// import { useVideoPlayer, VideoView } from 'expo-video';
+// import { useState } from 'react';
 
 export default function App() {
-  const [recording, setRecording] =
-    useState<ScreenRecorder.ScreenRecordingFile>({ path: '', duration: 0 });
+  // const [recording, setRecording] =
+  //   useState<ScreenRecorder.ScreenRecordingFile>({ path: '', duration: 0 });
 
-  const player = useVideoPlayer(recording?.path);
+  // const player = useVideoPlayer(recording?.path);
 
   const getCameraPermissionStatus = () => {
     console.log('Getting Camera Permission Status');
@@ -43,14 +38,7 @@ export default function App() {
   };
 
   const handleStartRecording = async () => {
-    await ScreenRecorder.startGlobalRecording(
-      RECORDING_OPTIONS,
-      (file) => {
-        console.log('Finished with', file);
-        setRecording(file);
-      }
-      // (error) => console.log('Error', error)
-    );
+    await ScreenRecorder.startGlobalRecording();
   };
 
   return (
@@ -74,9 +62,9 @@ export default function App() {
       <Button title="Start Screen Recording" onPress={handleStartRecording} />
       <Button
         title="Stop Screen Recording"
-        onPress={ScreenRecorder.stopRecording}
+        onPress={ScreenRecorder.stopInAppRecording}
       />
-      <VideoView player={player} style={styles.player} />
+      {/* <VideoView player={player} style={styles.player} /> */}
     </View>
   );
 }
