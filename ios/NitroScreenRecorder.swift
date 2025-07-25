@@ -20,11 +20,14 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   private var isGlobalRecording = false
   private var globalRecordingId: String?
 
+  private var broadcastExtensionBundleID: String?
+
   // Polling timer for checking broadcast extension completion
   private var pollingTimer: Timer?
 
   override init() {
     super.init()
+    self.broadcastExtensionBundleID = "nitroscreenrecorderexample.example.broadcast-extension"
   }
 
   deinit {
@@ -124,6 +127,19 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
     return appGroupIdentifier
   }
+  
+  private func getExtensionBundleId() throws -> String {
+    let extensionBundleId: String? =
+      Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String
+
+    guard let extensionBundleId = extensionBundleId else {
+      throw RecorderError.error(
+        name: "APP_GROUP_IDENTIFIER_MISSING",
+        message: "appGroupIdentifier is nil"
+      )
+    }
+    return extensionBundleId
+  }
 
   func startInAppRecording(
     enableMic: Bool,
@@ -166,46 +182,65 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
     }
 
-    // Store preferences in app group for broadcast extension
+    // Store preferences for the broadcast extension
     try storeRecordingPreferences(enableMic: enableMic, enableCamera: enableCamera)
 
-    broadcastDelegate = BroadcastDelegate(recorder: self)
-
-    RPBroadcastActivityViewController.load { [weak self] vc, error in
+    // Use direct broadcast controller creation
+    DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
-      if let error = error {
-        print("Failed to load broadcast activity view controller:", error)
-        return
+      // Create the system broadcast picker
+      let broadcastPicker = RPSystemBroadcastPickerView(
+        frame: CGRect(x: 0, y: 0, width: 50, height: 50))
+
+      // Set preferred extension if you have one
+      if let bundleID = self.broadcastExtensionBundleID {
+        broadcastPicker.preferredExtension = bundleID
       }
 
-      guard let vc = vc else {
-        print("No broadcast activity view controller")
-        return
-      }
+      // Style the picker (optional)
+      broadcastPicker.showsMicrophoneButton = false
 
-      vc.delegate = self.broadcastDelegate
-
-      DispatchQueue.main.async {
-        UIApplication.shared
+      // Add to the current view temporarily
+      guard
+        let window = UIApplication.shared
           .connectedScenes
-          .compactMap { $0 as? UIWindowScene }
+          .compactMap({ $0 as? UIWindowScene })
           .first?
           .windows
-          .first(where: { $0.isKeyWindow })?
-          .rootViewController?
-          .topMostViewController()
-          .present(vc, animated: true)
+          .first(where: { $0.isKeyWindow })
+      else {
+        return
       }
+
+      // Make it invisible but functional
+      broadcastPicker.alpha = 0.01
+      window.addSubview(broadcastPicker)
+
+      // Programmatically trigger the picker
+      // This will show the system broadcast interface immediately
+      if let button = broadcastPicker.subviews.first(where: { $0 is UIButton }) as? UIButton {
+        button.sendActions(for: .touchUpInside)
+      }
+
+      // Clean up the picker view after a short delay
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        broadcastPicker.removeFromSuperview()
+      }
+
+      // Start polling for completion
+      self.startPollingForCompletion()
     }
   }
 
   private func storeRecordingPreferences(enableMic: Bool, enableCamera: Bool) throws {
     let appGroupId = try getAppGroupIdentifier()
 
-    guard let containerURL = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: appGroupId
-    ) else {
+    guard
+      let containerURL = FileManager.default.containerURL(
+        forSecurityApplicationGroupIdentifier: appGroupId
+      )
+    else {
       throw RecorderError.error(
         name: "APP_GROUP_ACCESS_FAILED",
         message: "Could not access app group container"
@@ -274,7 +309,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       } else {
         print("Broadcast stopped successfully")
       }
-
       self?.cleanupRecording()
     }
   }
@@ -284,7 +318,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     broadcastDelegate = nil
     isGlobalRecording = false
   }
-  
+
   func clearFiles() throws {
     return
   }

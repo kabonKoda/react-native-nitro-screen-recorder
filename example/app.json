@@ -36,9 +36,7 @@
           "enableMicrophonePermission": true,
           "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
           "enableGlobalRecording": true,
-          "disableExperimental": false,
-          "iosBroadcastUploadExtensionName": "BroadcastExtension",
-          "iosBroadcastUploadExtensionUsageDescription": "Record your screen for sharing content."
+          "disableExperimental": false
       }
       ]
     ]

@@ -33,28 +33,9 @@ export interface ConfigProps {
   enableGlobalRecording?: boolean;
 
   /**
-   * Name of the Broadcast Upload Extension target in Xcode
-   * @default "BroadcastUploadExtension"
-   * @example "MyAppBroadcastUploadExtension"
-   */
-  iosBroadcastUploadExtensionName?: string;
-  /**
-   * Name of the Broadcast Upload Extension target in Xcode
-   * @default "`Stream your screen back to ${appName}`"
-   * @example "Record your screen for collaboration"
-   */
-  iosBroadcastUploadExtensionUsageDescription?: string;
-  /**
    * App Group identifier used to share data between the app and its extensions
    * @default `group.$\{PRODUCT_BUNDLE_IDENTIFIER\}.screenrecording`
    * @example "group.com.mycompany.myapp.screenrecording"
    */
   iosAppGroupIdentifier?: string;
-
-  /**
-   * Bundle identifier for the Broadcast Upload Extension
-   * @default `$\{PRODUCT_BUNDLE_IDENTIFIER\}.broadcast-extension`
-   * @example "com.mycompany.myapp.broadcast-extension"
-   */
-  iosBroadcastUploadExtensionBundleIdentifier?: string;
 }
