@@ -1,25 +1,22 @@
 import { View, StyleSheet, Button, Text, ScrollView } from 'react-native';
 import * as ScreenRecorder from 'react-native-nitro-screen-recorder';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 export default function App() {
   const [inAppRecording, setInAppRecording] = useState<
     ScreenRecorder.ScreenRecordingFile | undefined
   >();
-  const [globalRecording, setGlobalRecording] = useState<
-    ScreenRecorder.ScreenRecordingFile | undefined
-  >();
 
-  useEffect(() => {
-    const unsubscribe = ScreenRecorder.addScreenRecordingListener((event) => {
-      console.log('EVENT CHANGE DETECTED', JSON.stringify(event, null, 2));
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
+  const {
+    recording: globalRecording,
+    refetch,
+    // isError,
+    isLoading,
+    // error,
+  } = ScreenRecorder.useGlobalRecording({
+    refetchOnAppForeground: true,
+  });
 
   // @ts-ignore
   const inAppPlayer = useVideoPlayer(inAppRecording?.path);
@@ -28,30 +25,22 @@ export default function App() {
 
   // Permission Functions
   const getCameraPermissionStatus = () => {
-    console.log('Getting Camera Permission Status');
-    ScreenRecorder.getCameraPermissionStatus().then((status) => {
-      console.log(JSON.stringify(status, null, 2));
-    });
+    console.log('CAMERA STATUS:', ScreenRecorder.getCameraPermissionStatus());
   };
 
   const getMicrophonePermissionStatus = () => {
-    console.log('Getting Microphone Permission Status');
-    ScreenRecorder.getMicrophonePermissionStatus().then((status) => {
-      console.log(JSON.stringify(status, null, 2));
-    });
+    console.log('MIC STATUS:', ScreenRecorder.getMicrophonePermissionStatus());
   };
 
   const requestCameraPermission = () => {
-    console.log('Requesting Camera Permission');
     ScreenRecorder.requestCameraPermission().then((status) => {
-      console.log(JSON.stringify(status, null, 2));
+      console.log('Received Camera Status:', JSON.stringify(status, null, 2));
     });
   };
 
   const requestMicrophonePermission = () => {
-    console.log('Requesting Mic Permission');
     ScreenRecorder.requestMicrophonePermission().then((status) => {
-      console.log(JSON.stringify(status, null, 2));
+      console.log('Received Mic Status:', JSON.stringify(status, null, 2));
     });
   };
 
@@ -60,10 +49,10 @@ export default function App() {
     enableMic: true,
     enableCamera: true,
     cameraPreviewStyle: {
-      width: 100,
-      height: 300,
+      width: 150,
+      height: 200,
       top: 30,
-      left: 10,
+      left: 20,
       borderRadius: 10,
     },
     cameraDevice: 'front',
@@ -93,14 +82,16 @@ export default function App() {
   };
 
   // Global Recording Functions
-  const handleStartGlobalRecording = async () => {
-    await ScreenRecorder.startGlobalRecording();
+  const handleStartGlobalRecording = () => {
+    ScreenRecorder.startGlobalRecording();
   };
 
   const handleGetGlobalRecordingFile = () => {
-    const latest = ScreenRecorder.getLatestGlobalRecording();
-    setGlobalRecording(latest);
-    console.log('Latest global recording:', JSON.stringify(latest, null, 2));
+    refetch();
+  };
+
+  const handleClearRecordingCache = () => {
+    ScreenRecorder.clearCache();
   };
 
   return (
@@ -198,8 +189,22 @@ export default function App() {
             />
           </View>
         </View>
+        {isLoading && <Text style={styles.loading}>Fetching files</Text>}
         <Text style={styles.playerLabel}>Global Recording Player</Text>
         <VideoView player={globalPlayer} style={styles.player} />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Clear Cache</Text>
+        <View style={styles.buttonRow}>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Clear Recording Cache"
+              onPress={handleClearRecordingCache}
+              color="#FF3B30"
+            />
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -251,6 +256,10 @@ const styles = StyleSheet.create({
   buttonContainer: {
     flex: 1,
     marginHorizontal: 4,
+  },
+  loading: {
+    width: '100%',
+    textAlign: 'center',
   },
   playerLabel: {
     fontSize: 14,

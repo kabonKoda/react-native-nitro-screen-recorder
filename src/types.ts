@@ -34,7 +34,6 @@ export type RecordingOptions =
 export type InAppRecordingInput = {
   options: RecordingOptions;
   onRecordingFinished: (file: ScreenRecordingFile) => void;
-  // onRecordingError: (error: RecordingError) => void;
 };
 
 export type GlobalRecordingInput = {
@@ -42,15 +41,11 @@ export type GlobalRecordingInput = {
 };
 
 export interface ScreenRecordingFile {
-  recordingId: string;
   path: string;
   name: string;
   size: number;
   duration: number;
-  timestampCreated: Date;
-  timestampFinished: Date;
   enabledMicrophone: boolean;
-  status: string;
 }
 
 export interface RecordingError {

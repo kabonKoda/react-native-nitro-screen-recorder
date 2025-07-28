@@ -5,6 +5,7 @@ import type {
   PermissionResponse,
   ScreenRecordingFile,
   ScreenRecordingEvent,
+  PermissionStatus,
 } from './types';
 /**
  * After any change to this file, you have to run
@@ -26,8 +27,8 @@ export interface NitroScreenRecorder
   /**
    * PERMISSIONS SECTION
    */
-  getCameraPermissionStatus(): Promise<PermissionResponse>;
-  getMicrophonePermissionStatus(): Promise<PermissionResponse>;
+  getCameraPermissionStatus(): PermissionStatus;
+  getMicrophonePermissionStatus(): PermissionStatus;
   requestCameraPermission(): Promise<PermissionResponse>;
   requestMicrophonePermission(): Promise<PermissionResponse>;
   /**Screen Recording */

@@ -17,15 +17,13 @@ struct Listener<T> {
 
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
-
   let recorder = RPScreenRecorder.shared()
   private var inAppRecordingActive: Bool = false
 
   private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
-  private var onGlobalRecordingFinishedCallback: RecordingFinishedCallback?
   private var recordingEventListeners: [Listener<ScreenRecordingListener>] = []
   private var nextListenerId: Double = 0
-  
+
   override init() {
     super.init()
     registerListener()
@@ -53,51 +51,49 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   }
 
   @objc private func handleScreenRecordingChange() {
-      let type: RecordingEventType
-      let reason: RecordingEventReason
-      if UIScreen.main.isCaptured {
-        reason = .began
-        if(inAppRecordingActive) {
-          type = .withinapp
-        } else {
-          type = .global
-        }
+    let type: RecordingEventType
+    let reason: RecordingEventReason
+    if UIScreen.main.isCaptured {
+      reason = .began
+      if inAppRecordingActive {
+        type = .withinapp
       } else {
-        reason = .ended
-        if(inAppRecordingActive) {
-          type = .withinapp
-        } else {
-          type = .global
-        }
+        type = .global
       }
-      let event = ScreenRecordingEvent(type: type, reason: reason)
-      recordingEventListeners.forEach { $0.callback(event) }
+    } else {
+      reason = .ended
+      if inAppRecordingActive {
+        type = .withinapp
+      } else {
+        type = .global
+      }
+    }
+    let event = ScreenRecordingEvent(type: type, reason: reason)
+    recordingEventListeners.forEach { $0.callback(event) }
   }
-  
-  func addScreenRecordingListener(callback: @escaping (ScreenRecordingEvent) -> Void) throws -> Double {
+
+  func addScreenRecordingListener(callback: @escaping (ScreenRecordingEvent) -> Void) throws
+    -> Double
+  {
     let listener = Listener(id: nextListenerId, callback: callback)
     recordingEventListeners.append(listener)
     nextListenerId += 1
     return listener.id
   }
-  
+
   func removeScreenRecordingListener(id: Double) throws {
     recordingEventListeners.removeAll { $0.id == id }
   }
-  
+
   // MARK: - Permission Methods
-  public func getCameraPermissionStatus() throws -> Promise<PermissionResponse> {
-    return Promise.async {
+  public func getCameraPermissionStatus() throws -> PermissionStatus {
       let status = AVCaptureDevice.authorizationStatus(for: .video)
-      return self.mapAVAuthorizationStatusToPermissionResponse(status)
-    }
+      return self.mapAVAuthorizationStatusToPermissionResponse(status).status
   }
 
-  public func getMicrophonePermissionStatus() throws -> Promise<PermissionResponse> {
-    return Promise.async {
+  public func getMicrophonePermissionStatus() throws -> PermissionStatus {
       let status = AVCaptureDevice.authorizationStatus(for: .audio)
-      return self.mapAVAuthorizationStatusToPermissionResponse(status)
-    }
+    return self.mapAVAuthorizationStatusToPermissionResponse(status).status
   }
 
   public func requestCameraPermission() throws -> Promise<PermissionResponse> {
@@ -217,15 +213,11 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
         // build your ScreenRecordingFile
         let file = ScreenRecordingFile(
-          recordingId: UUID().uuidString,
           path: outputURL.path,
           name: outputURL.lastPathComponent,
           size: attrs[.size] as? Double ?? 0,
           duration: duration,
-          timestampCreated: Date(),
-          timestampFinished: Date(),
           enabledMicrophone: self.recorder.isMicrophoneEnabled,
-          status: "completed"
         )
 
         print("✅ Recording finished and saved to:", outputURL.path)
@@ -254,23 +246,11 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     safelyClearInAppRecordingFiles()
     print("🛑 In‑app recording canceled and buffers cleared")
   }
-  /**
-      ----------- GLOBAL RECORDING SECTION ------------------
-   1. Generate a url to store the recording the app group in the JSON format:
-    {
-     path: `appGroupContainerUrl/uuid/screen_recording.mp4`,
-     timestampCreated: xx/xx/xxxx,
-     timestampFinished: xx/xx/xxx
-    },
-   2. When the user hits `Start Broadcast` in the Picker, the `SampleHandler.swift` finds the url with
-   the most recent `dateCreated` field and uses that path to store the recording in.
-   3. When the recording is finished (user taps on the red circle), the `SampleHandler.swift` updates the dateFinished.
-   4  (Alternatively) User calls stop global recording, which returns the path.
-   5. You then call the `getLatestGlobalRecording` and it will fetch that file.
-   6. When the user is done with the file, he can call clean files.
-   */
-
-  func presentGlobalBroadcastModal() {
+  
+/**
+ Attaches a micro PickerView button off-screen screen and presses that button to open the broadcast.
+ */
+func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
@@ -321,24 +301,17 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
     }
   }
-
-  func startGlobalRecording(onRecordingFinished: @escaping RecordingFinishedCallback) throws {
-    //    try? safelyClearGlobalRecordingFiles()
-    self.onGlobalRecordingFinishedCallback = onRecordingFinished
+  
+  func startGlobalRecording() throws {
     presentGlobalBroadcastModal()
   }
 
-  func stopGlobalRecording() throws -> ScreenRecordingFile? {
-    print("🛑 Stopping global recording...")
-
-    return try getLatestGlobalRecording()
-  }
-
-  func getLatestGlobalRecording() throws -> ScreenRecordingFile? {
-    // 1️⃣ Resolve container
+  func getLastGlobalRecording() throws -> ScreenRecordingFile? {
+    // 1) Resolve app group doc dir
     guard let appGroupId = try? getAppGroupIdentifier(),
-      let containerURL = FileManager.default
-        .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
+      let docsURL = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+        .appendingPathComponent("Library/Documents/", isDirectory: true)
     else {
       throw RecorderError.error(
         name: "APP_GROUP_ACCESS_FAILED",
@@ -346,87 +319,59 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
     }
 
-    let recordingsDir = containerURL.appendingPathComponent("recordings")
-
-    // 🚨 Debug dump
-    print("🔍 [App] App Group ID: \(appGroupId)")
-    print("🔍 [App] Container URL: \(containerURL.path)")
-    print(
-      "🔍 [App] recordingsDir.exists: \(FileManager.default.fileExists(atPath: recordingsDir.path))")
-    do {
-      let rawNames = try FileManager.default.contentsOfDirectory(atPath: recordingsDir.path)
-      print("🔍 [App] recordingsDir listing: \(rawNames)")
-    } catch {
-      print("❌ [App] Failed to list recordingsDir: \(error)")
-    }
-
-    // 2️⃣ Find metadata files
+    // 2) Find the newest .mp4
+    let keys: [URLResourceKey] = [
+      .contentModificationDateKey, .creationDateKey, .isRegularFileKey, .fileSizeKey,
+    ]
     let contents = try FileManager.default.contentsOfDirectory(
-      at: recordingsDir,
-      includingPropertiesForKeys: [.creationDateKey, .fileSizeKey]
+      at: docsURL,
+      includingPropertiesForKeys: keys,
+      options: [.skipsHiddenFiles]
     )
 
-    let metadataFiles = contents.filter {
-      $0.lastPathComponent.hasSuffix("_metadata.json")
-    }
-    print("🔍 [App] metadataFiles found: \(metadataFiles.map { $0.lastPathComponent })")
+    let mp4s = contents.filter { $0.pathExtension.lowercased() == "mp4" }
 
     guard
-      let latestMetaURL = metadataFiles.max(by: { a, b in
-        let d1 = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-        let d2 = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
-        return d1 < d2
+      let latestURL = try mp4s.max(by: { a, b in
+        let va = try a.resourceValues(forKeys: Set(keys))
+        let vb = try b.resourceValues(forKeys: Set(keys))
+        let da = va.contentModificationDate ?? va.creationDate ?? .distantPast
+        let db = vb.contentModificationDate ?? vb.creationDate ?? .distantPast
+        return da < db
       })
     else {
-      print("ℹ️ [App] No metadata to parse")
+      // Nothing there yet
       return nil
     }
-    print("🔍 [App] Using metadata: \(latestMetaURL.path)")
 
-    // 3️⃣ Read & log metadata contents
-    let data = try Data(contentsOf: latestMetaURL)
-    guard let metadata = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-      throw RecorderError.error(name: "INVALID_METADATA", message: "Could not parse JSON")
-    }
-    print("🔍 [App] Parsed metadata dict: \(metadata)")
+    // 3) Build ScreenRecordingFile
+    let attrs = try FileManager.default.attributesOfItem(atPath: latestURL.path)
+    let size = (attrs[.size] as? NSNumber)?.doubleValue ?? 0.0
+    let asset = AVURLAsset(url: latestURL)
+    let duration = CMTimeGetSeconds(asset.duration)
 
-    // 4️⃣ Check video file
-    let videoPath = metadata["path"] as? String ?? ""
-    print("🔍 [App] Video path in metadata: \(videoPath)")
-    let exists = FileManager.default.fileExists(atPath: videoPath)
-    print("🔍 [App] FileManager.exists(videoPath): \(exists)")
-    if exists {
-      let attrs = try FileManager.default.attributesOfItem(atPath: videoPath)
-      print("🔍 [App] Video attributes: \(attrs)")
-    }
+    // Read mic flag saved by the extension
+    let micEnabled =
+      UserDefaults(suiteName: appGroupId)?
+      .bool(forKey: "LastBroadcastMicrophoneWasEnabled") ?? false
 
-    let recordingFile = ScreenRecordingFile(
-      recordingId: metadata["recordingId"] as? String ?? "unknown",
-      path: metadata["path"] as? String ?? "",
-      name: metadata["name"] as? String ?? "",
-      size: metadata["size"] as? Double ?? 0,
-      duration: metadata["duration"] as? Double ?? 0.0,
-      timestampCreated: Date(
-        timeIntervalSince1970: metadata["timestampCreated"] as? TimeInterval ?? 0),
-      timestampFinished: Date(
-        timeIntervalSince1970: metadata["timestampFinished"] as? TimeInterval ?? 0),
-      enabledMicrophone: metadata["enabledMicrophone"] as? Bool ?? false,
-      status: metadata["status"] as? String ?? "unknown"
+    return ScreenRecordingFile(
+      path: latestURL.path,
+      name: latestURL.lastPathComponent,
+      size: size,
+      duration: duration,
+      enabledMicrophone: micEnabled
     )
-
-    // Verify the actual video file exists
-    if FileManager.default.fileExists(atPath: recordingFile.path) {
-      return recordingFile
-    } else {
-      print("⚠️ Metadata found but video file missing at: \(recordingFile.path)")
-      return nil
-    }
   }
 
   func safelyClearGlobalRecordingFiles() throws {
+    let fm = FileManager.default
+
     guard let appGroupId = try? getAppGroupIdentifier(),
-      let containerURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: appGroupId)
+      let docsURL =
+        fm
+        .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+        .appendingPathComponent("Library/Documents/", isDirectory: true)
     else {
       throw RecorderError.error(
         name: "APP_GROUP_ACCESS_FAILED",
@@ -434,20 +379,14 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
     }
 
-    let recordingsDir = containerURL.appendingPathComponent("recordings")
-
     do {
-      if FileManager.default.fileExists(atPath: recordingsDir.path) {
-        let contents = try FileManager.default.contentsOfDirectory(
-          at: recordingsDir, includingPropertiesForKeys: nil)
-
-        for fileURL in contents {
-          try FileManager.default.removeItem(at: fileURL)
-          print("🗑️ Deleted: \(fileURL.lastPathComponent)")
-        }
-
-        print("✅ All recording files cleared")
+      guard fm.fileExists(atPath: docsURL.path) else { return }
+      let items = try fm.contentsOfDirectory(at: docsURL, includingPropertiesForKeys: nil)
+      for fileURL in items where fileURL.pathExtension.lowercased() == "mp4" {
+        try fm.removeItem(at: fileURL)
+        print("🗑️ Deleted: \(fileURL.lastPathComponent)")
       }
+      print("✅ All recording files cleared in \(docsURL.path)")
     } catch {
       throw RecorderError.error(
         name: "CLEANUP_FAILED",

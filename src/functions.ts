@@ -5,16 +5,17 @@ import {
   PermissionResponse,
   InAppRecordingInput,
   ScreenRecordingEvent,
+  PermissionStatus,
 } from './types';
 
 const NitroScreenRecorderHybridObject =
   NitroModules.createHybridObject<NitroScreenRecorder>('NitroScreenRecorder');
 
-export async function getCameraPermissionStatus(): Promise<PermissionResponse> {
+export function getCameraPermissionStatus(): PermissionStatus {
   return NitroScreenRecorderHybridObject.getCameraPermissionStatus();
 }
 
-export async function getMicrophonePermissionStatus(): Promise<PermissionResponse> {
+export function getMicrophonePermissionStatus(): PermissionStatus {
   return NitroScreenRecorderHybridObject.getMicrophonePermissionStatus();
 }
 
@@ -55,16 +56,20 @@ export function cancelInAppRecording(): void {
   return NitroScreenRecorderHybridObject.cancelInAppRecording();
 }
 
-export async function startGlobalRecording(): Promise<void> {
+export function startGlobalRecording(): void {
   return NitroScreenRecorderHybridObject.startGlobalRecording();
 }
 
-export function getLatestGlobalRecording(): ScreenRecordingFile | undefined {
+export function getLastGlobalRecording(): ScreenRecordingFile | undefined {
   return NitroScreenRecorderHybridObject.getLastGlobalRecording();
 }
 
 export function stopInAppRecording(): void {
   return NitroScreenRecorderHybridObject.stopInAppRecording();
+}
+
+export function clearCache(): void {
+  return NitroScreenRecorderHybridObject.clearRecordingCache();
 }
 
 export function addScreenRecordingListener(

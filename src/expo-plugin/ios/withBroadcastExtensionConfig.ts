@@ -2,9 +2,7 @@ import { ConfigPlugin } from '@expo/config-plugins';
 
 import {
   broadcastExtensionName,
-  // broadcastExtensionSetupUIName,
   getBroadcastExtensionBundleIdentifier,
-  // getBroadcastExtensionSetupUIBundleIdentifier,
 } from '../constants';
 import { getBroadcastExtensionEntitlements } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
@@ -16,10 +14,6 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
   const extName = broadcastExtensionName;
   const appIdentifier = config.ios!.bundleIdentifier!;
   const extIdentifier = getBroadcastExtensionBundleIdentifier(appIdentifier);
-
-  // const extSetupUIName = broadcastExtensionSetupUIName;
-  // const extSetupUIIdentifier =
-  //   getBroadcastExtensionSetupUIBundleIdentifier(appIdentifier);
 
   // When disabled this function no longer alters the config object passed to it
   // It only returns the original config to satisfy any calling conventions
@@ -55,10 +49,6 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
         targetName: extName,
         bundleIdentifier: extIdentifier,
       });
-      // config.extra.eas.build.experimental.ios.appExtensions.push({
-      //   targetName: extSetupUIName,
-      //   bundleIdentifier: extSetupUIIdentifier,
-      // });
       extConfigIndex =
         config.extra.eas.build.experimental.ios.appExtensions.length - 1;
     }
