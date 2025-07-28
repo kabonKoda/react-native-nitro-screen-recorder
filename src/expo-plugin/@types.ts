@@ -38,4 +38,8 @@ export interface ConfigProps {
    * @example "group.com.mycompany.myapp.screenrecording"
    */
   iosAppGroupIdentifier?: string;
+  /**
+   * A flag that hides logs for the plugin.
+   */
+  showPluginLogs?: boolean;
 }

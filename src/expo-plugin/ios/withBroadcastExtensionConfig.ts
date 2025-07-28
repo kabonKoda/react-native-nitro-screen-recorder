@@ -6,11 +6,13 @@ import {
 } from '../constants';
 import { getBroadcastExtensionEntitlements } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
+import { makePluginLogger } from './PluginLogger';
 
 export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
   config,
   props
 ) => {
+  const l = makePluginLogger(props.showPluginLogs ?? false);
   const extName = broadcastExtensionName;
   const appIdentifier = config.ios!.bundleIdentifier!;
   const extIdentifier = getBroadcastExtensionBundleIdentifier(appIdentifier);
@@ -18,6 +20,7 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
   // When disabled this function no longer alters the config object passed to it
   // It only returns the original config to satisfy any calling conventions
   if (!props.disableExperimental) {
+    l.info('Applying Expo experimental appExtensions.');
     let extConfigIndex = null;
     config.extra?.eas?.build?.experimental?.ios?.appExtensions?.forEach(
       (ext: any, index: number) => {
@@ -60,9 +63,7 @@ export const withBroadcastExtensionConfig: ConfigPlugin<ConfigProps> = (
       ...getBroadcastExtensionEntitlements(appIdentifier, props),
     };
   } else {
-    console.warn(
-      `[react-native-nitro-screen-recorder] experimental config disabled`
-    );
+    l.info('Skipping Expo experimental appExtensions.');
   }
 
   return config;

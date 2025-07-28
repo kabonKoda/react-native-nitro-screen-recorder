@@ -196,16 +196,13 @@ export function getBroadcastExtensionSampleHandlerContent(
   let updatedScheme = scheme;
   if (Array.isArray(scheme)) {
     console.warn(
-      `[react-native-nitro-screen-recorder] multiple scheme detected (${scheme.join(',')}), using:${updatedScheme}`
+      `[⚠️ nitro-screen-recorder] Multiple scheme detected (${scheme.join(',')}), using:${updatedScheme}`
     );
     updatedScheme = scheme[0];
   }
-  console.warn(
-    `[react-native-nitro-screen-recorder] add ios broadcast extension (scheme:${updatedScheme} groupIdentifier:${groupIdentifier})`
-  );
   if (!updatedScheme) {
     throw new Error(
-      "[react-native-nitro-screen-recorder] missing custom URL scheme 'expo.scheme' in app.json ! (see https://docs.expo.dev/guides/linking/#linking-to-your-app)"
+      "[🔴 nitro-screen-recorder] Missing custom URL scheme 'expo.scheme' in app.json ! (see https://docs.expo.dev/guides/linking/#linking-to-your-app)"
     );
   }
 

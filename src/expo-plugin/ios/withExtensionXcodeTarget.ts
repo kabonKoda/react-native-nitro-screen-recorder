@@ -13,6 +13,7 @@ import {
   getBroadcastExtensionBroadcastWriterPath,
 } from './writeBroadcastExtensionFiles';
 import { ConfigProps } from '../@types';
+import { makePluginLogger, PluginLogger } from './PluginLogger';
 
 /*───────────────────────────────────────────────────────────────────────────
  Helper to convert absolute paths into project‑relative paths for Xcode
@@ -28,14 +29,16 @@ function ensurePhaseOnTarget(
   pbx: any,
   targetUUID: string,
   phaseUUID: string,
-  comment = 'Frameworks'
+  comment = 'Frameworks',
+  l: PluginLogger
 ) {
   const nativeTargets = pbx.getPBXObject('PBXNativeTarget');
-  const targetObj = nativeTargets[targetUUID];
+  const targetObj = nativeTargets?.[targetUUID];
 
   if (!targetObj) {
-    console.warn(
-      `[withBroadcastExtension] ⚠️  Could not find PBXNativeTarget ${targetUUID}`
+    l.warn(
+      `Unable to attach build phase '${comment}' (${phaseUUID}): PBXNativeTarget not found (UUID=${targetUUID}). ` +
+        `Tip: Verify the target exists in your .xcodeproj.`
     );
     return;
   }
@@ -46,8 +49,12 @@ function ensurePhaseOnTarget(
 
   if (!already) {
     targetObj.buildPhases.push({ value: phaseUUID, comment });
-    console.log(
-      `[withBroadcastExtension] • Attached Frameworks phase ${phaseUUID} to target buildPhases`
+    l.info(
+      `Attached build phase '${comment}' (UUID=${phaseUUID}) to target (UUID=${targetUUID}).`
+    );
+  } else {
+    l.info(
+      `Build phase '${comment}' (UUID=${phaseUUID}) is already attached to target (UUID=${targetUUID}).`
     );
   }
 }
@@ -57,59 +64,54 @@ function ensurePhaseOnTarget(
 ───────────────────────────────────────────────────────────────────────────*/
 function getMainAppDevelopmentTeam(
   pbx: any,
-  mainAppName: string
+  mainAppName: string,
+  l: PluginLogger
 ): string | null {
   const configs = pbx.pbxXCBuildConfigurationSection();
 
   for (const key in configs) {
     const config = configs[key];
     const bs = config.buildSettings;
-
     if (!bs || !bs.PRODUCT_NAME) continue;
 
-    // Check if this is the main app's build configuration
-    // The main app's PRODUCT_NAME is typically the scheme name or $(TARGET_NAME)
     const productName = bs.PRODUCT_NAME?.replace(/"/g, '');
-
     if (productName === mainAppName || productName === '$(TARGET_NAME)') {
       const developmentTeam = bs.DEVELOPMENT_TEAM?.replace(/"/g, '');
       if (developmentTeam) {
-        console.log(
-          `[withBroadcastExtension] Found main app DEVELOPMENT_TEAM: ${developmentTeam}`
+        l.info(
+          `Resolved DEVELOPMENT_TEAM='${developmentTeam}' from main app configuration (PRODUCT_NAME='${productName}').`
         );
         return developmentTeam;
       }
     }
   }
 
-  // Fallback: look for any config with DEVELOPMENT_TEAM that's not an extension
+  // Fallback: any non-extension config with a team
   for (const key in configs) {
     const config = configs[key];
     const bs = config.buildSettings;
-
     if (!bs) continue;
 
     const productName = bs.PRODUCT_NAME?.replace(/"/g, '');
     const developmentTeam = bs.DEVELOPMENT_TEAM?.replace(/"/g, '');
 
-    // Skip if it looks like an extension
     if (
       productName &&
       (productName.includes('Extension') || productName.includes('Widget'))
     ) {
       continue;
     }
-
     if (developmentTeam) {
-      console.log(
-        `[withBroadcastExtension] Found DEVELOPMENT_TEAM from config: ${developmentTeam}`
+      l.info(
+        `Resolved DEVELOPMENT_TEAM='${developmentTeam}' from fallback configuration (PRODUCT_NAME='${productName ?? 'N/A'}').`
       );
       return developmentTeam;
     }
   }
 
-  console.warn(
-    '[withBroadcastExtension] ⚠️  Could not find DEVELOPMENT_TEAM in main app'
+  l.warn(
+    `No DEVELOPMENT_TEAM detected in main app build settings. ` +
+      `Action required: Open Xcode → Targets → YourApp → Signing & Capabilities and ensure a Team is selected.`
   );
   return null;
 }
@@ -118,13 +120,13 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
   config,
   props
 ) => {
-  console.log('[withBroadcastExtension] plugin invoked');
+  const l = makePluginLogger(props.showPluginLogs ?? false);
 
   return withXcodeProject(config, async (mod) => {
-    console.log('[withBroadcastExtension] withXcodeProject callback');
+    const startedAt = Date.now();
 
     /*───────────────────────────────────────────────────────────────────
-     Basic identifiers
+     STEP 0/4: Context summary
     ───────────────────────────────────────────────────────────────────*/
     const extensionName = broadcastExtensionName;
     const projectRoot = mod.modRequest.platformProjectRoot;
@@ -132,22 +134,24 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
     const appIdentifier = mod.ios?.bundleIdentifier!;
     const bundleIdentifier =
       getBroadcastExtensionBundleIdentifier(appIdentifier);
-
     const currentProjectVersion = mod.ios!.buildNumber || '1';
     const marketingVersion = mod.version!;
-
-    console.log('[withBroadcastExtension] identifiers:', {
-      extensionName,
-      projectRoot,
-      scheme,
-      appIdentifier,
-      bundleIdentifier,
-    });
+    const summary = [
+      `Preparing Broadcast Upload Extension target...`,
+      `  • Scheme:               ${scheme}`,
+      `  • App bundle ID:        ${appIdentifier}`,
+      `  • Extension target:     ${extensionName}`,
+      `  • Extension bundle ID:  ${bundleIdentifier}`,
+      `  • Marketing version:    ${marketingVersion}`,
+      `  • Project version:      ${currentProjectVersion}`,
+      `  • Project root:         ${projectRoot}`,
+    ].join('\n');
+    l.info(summary);
 
     /*───────────────────────────────────────────────────────────────────
-     Write extension Swift + plist + xcprivacy files
+     STEP 1/4: Emit Swift, plist, entitlements, privacy files
     ───────────────────────────────────────────────────────────────────*/
-    console.log('[withBroadcastExtension] writing extension files');
+    l.step('STEP 1/4 — Generating extension source and configuration files');
     await writeBroadcastExtensionFiles(
       projectRoot,
       scheme,
@@ -155,94 +159,133 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
       props,
       mod.name
     );
-    console.log(
-      '[withBroadcastExtension] writeBroadcastExtensionFiles complete'
+    l.info(
+      `Wrote extension files: SampleHandler.swift, BroadcastWriter.swift, Info.plist, Entitlements, and Privacy manifest.`
     );
 
+    /*───────────────────────────────────────────────────────────────────
+     STEP 2/4: Load PBX project
+    ───────────────────────────────────────────────────────────────────*/
+    l.step('STEP 2/4 — Loading Xcode project (PBX) for modifications');
     const pbx = mod.modResults;
-    console.log('[withBroadcastExtension] loaded PBX project');
 
     /*───────────────────────────────────────────────────────────────────
-     Get the main app's development team
+     STEP 3/4: Ensure target + files + frameworks
     ───────────────────────────────────────────────────────────────────*/
-    const mainAppDevelopmentTeam = getMainAppDevelopmentTeam(pbx, scheme);
+    l.step(
+      'STEP 3/4 — Creating or updating the Broadcast extension target and sources'
+    );
 
-    /*───────────────────────────────────────────────────────────────────
-     MAIN EXTENSION TARGET  (BroadcastExtension)
-    ───────────────────────────────────────────────────────────────────*/
-    if (!pbx.pbxTargetByName(extensionName)) {
-      console.log(`Adding target: ${extensionName}`);
+    const existingTarget = pbx.pbxTargetByName(extensionName);
+    if (!existingTarget) {
+      l.info(
+        `Extension target '${extensionName}' not found — creating PBXNativeTarget and required build phases.`
+      );
       const target = pbx.addTarget(
         extensionName,
         'app_extension',
         extensionName
       );
 
-      /* Groups & basic build phases */
+      // Groups & basic build phases
       pbx.addBuildPhase([], 'PBXSourcesBuildPhase', 'Sources', target.uuid);
       pbx.addBuildPhase([], 'PBXResourcesBuildPhase', 'Resources', target.uuid);
       const groupKey = pbx.pbxCreateGroup(extensionName, extensionName);
-      console.log(`  groupKey: ${groupKey}`);
+      l.info(
+        `Created PBX group '${extensionName}' (UUID=${groupKey}) to contain extension sources and configuration files.`
+      );
 
-      /* Info.plist + Entitlements + Privacy */
+      // Info.plist + Entitlements + Privacy
       const infoRel = makeRelative(
         getBroadcastExtensionInfoFilePath(projectRoot),
         projectRoot
       );
       pbx.addFile(infoRel, groupKey);
+      l.info(`Registered Info.plist at '${infoRel}' in extension group.`);
 
       const entRel = makeRelative(
         getBroadcastExtensionEntitlementsFilePath(projectRoot),
         projectRoot
       );
       pbx.addFile(entRel, groupKey);
+      l.info(`Registered Entitlements at '${entRel}' in extension group.`);
 
       const privRel = makeRelative(
         getMainExtensionPrivacyInfoFilePath(projectRoot),
         projectRoot
       );
       pbx.addFile(privRel, groupKey);
+      l.info(`Registered Privacy manifest at '${privRel}' in extension group.`);
 
-      /* Swift sources */
+      // Swift sources
       const handlerRel = makeRelative(
         getBroadcastExtensionSampleHandlerPath(projectRoot),
         projectRoot
       );
       pbx.addSourceFile(handlerRel, { target: target.uuid }, groupKey);
+      l.info(`Added Swift source: SampleHandler.swift → '${handlerRel}'.`);
+
       const writerRel = makeRelative(
         getBroadcastExtensionBroadcastWriterPath(projectRoot),
         projectRoot
       );
       pbx.addSourceFile(writerRel, { target: target.uuid }, groupKey);
+      l.info(`Added Swift source: BroadcastWriter.swift → '${writerRel}'.`);
 
-      /*──────── frameworks: ReplayKit ────────*/
+      // Frameworks: ReplayKit
       const rpFile = pbx.addFramework('ReplayKit.framework', {
         target: target.uuid,
         sourceTree: 'SDKROOT',
         link: true,
       });
-      if (rpFile) console.log(`[BroadcastExtension] linked ReplayKit`);
+      if (rpFile) {
+        l.info(
+          `Linked system framework 'ReplayKit.framework' (fileRef UUID=${rpFile.uuid}).`
+        );
+      } else {
+        l.warn(
+          `ReplayKit.framework did not return a fileRef; the link may already exist. Verify in Xcode → Build Phases → Link Binary With Libraries.`
+        );
+      }
 
       const fwSection = pbx.getPBXObject('PBXFrameworksBuildPhase');
       const phaseId = Object.entries(fwSection).find(([_, p]: any) =>
         (p.files ?? []).some(
-          (f: any) => (typeof f === 'object' ? f.value : f) === rpFile.uuid
+          (f: any) => (typeof f === 'object' ? f.value : f) === rpFile?.uuid
         )
       )?.[0];
-      if (phaseId) ensurePhaseOnTarget(pbx, target.uuid, phaseId, 'Frameworks');
+
+      if (phaseId) {
+        ensurePhaseOnTarget(pbx, target.uuid, phaseId, 'Frameworks', l);
+      } else {
+        l.warn(
+          `Could not resolve the Frameworks build phase that contains ReplayKit; the PBX relationship may be implicit.`
+        );
+      }
+    } else {
+      l.info(
+        `Detected existing extension target '${extensionName}' — skipping target creation and proceeding to build settings.`
+      );
     }
 
     /*───────────────────────────────────────────────────────────────────
-     Build‑settings tweaks for BroadcastExtension only.
+     STEP 4/4: Configure build settings (code sign, plist paths, versions)
     ───────────────────────────────────────────────────────────────────*/
-    console.log('[withBroadcastExtension] configuring build settings');
+    l.step(
+      'STEP 4/4 — Applying extension build settings (signing, versions, plist, Swift)'
+    );
+    const mainAppDevelopmentTeam = getMainAppDevelopmentTeam(pbx, scheme, l);
+
     const configs = pbx.pbxXCBuildConfigurationSection();
     for (const key in configs) {
       const bs = configs[key].buildSettings;
       if (!bs || !bs.PRODUCT_NAME) continue;
 
       if (bs.PRODUCT_NAME === `"${extensionName}"`) {
-        console.log(`  Applying build settings for ${extensionName}`);
+        l.info(
+          `Updating build settings for extension '${extensionName}' (CONFIG=${configs[key].name ?? key}).`
+        );
+
         bs.CLANG_ENABLE_MODULES = 'YES';
         bs.INFOPLIST_FILE = `"${makeRelative(
           getBroadcastExtensionInfoFilePath(projectRoot),
@@ -261,19 +304,32 @@ export const withBroadcastExtensionXcodeTarget: ConfigPlugin<ConfigProps> = (
         bs.SWIFT_VERSION = '5.0';
         bs.TARGETED_DEVICE_FAMILY = '"1,2"';
 
-        // Apply the main app's development team if found
         if (mainAppDevelopmentTeam) {
           bs.DEVELOPMENT_TEAM = `"${mainAppDevelopmentTeam}"`;
-          console.log(
-            `[withBroadcastExtension] Applied DEVELOPMENT_TEAM: ${mainAppDevelopmentTeam}`
+          l.info(
+            `Applied DEVELOPMENT_TEAM='${mainAppDevelopmentTeam}' to extension build settings.`
           );
         } else {
-          console.warn(
-            '[withBroadcastExtension] ⚠️  No DEVELOPMENT_TEAM found to apply'
+          l.warn(
+            `DEVELOPMENT_TEAM was not applied to the extension. ` +
+              `Action: Set a Team on the main app target and re-run prebuild, or manually set DEVELOPMENT_TEAM for the extension in Xcode.`
           );
         }
       }
     }
+
+    // Final summary
+    const elapsedMs = Date.now() - startedAt;
+    l.info(
+      [
+        `Broadcast extension configuration complete ✅`,
+        `  • Target:              ${extensionName}`,
+        `  • Bundle ID:           ${bundleIdentifier}`,
+        `  • Versions:            ${marketingVersion} (${currentProjectVersion})`,
+        `  • Duration:            ${elapsedMs}ms`,
+        `Open Xcode → select the extension target → verify Signing & Capabilities and 'Link Binary With Libraries' include ReplayKit.`,
+      ].join('\n')
+    );
 
     return mod;
   });
