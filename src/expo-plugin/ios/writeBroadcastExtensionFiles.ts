@@ -212,32 +212,32 @@ export function getBroadcastExtensionInfoContent(
 //   );
 // }
 
-export function getBroadcastExtensionSetupUIInfoContent(
-  appName: ConfigPlugin<ConfigProps>['name'],
-  appIdentifier: string,
-  props: ConfigProps
-) {
-  return plist.build({
-    CFBundleName: '$(PRODUCT_NAME)',
-    CFBundleDisplayName: `${appName} - Broadcast Extension Setup UI`,
-    CFBundleIdentifier: '$(PRODUCT_BUNDLE_IDENTIFIER)',
-    CFBundleDevelopmentRegion: '$(DEVELOPMENT_LANGUAGE)',
-    CFBundleExecutable: '$(EXECUTABLE_NAME)',
-    CFBundleInfoDictionaryVersion: '6.0',
-    CFBundlePackageType: '$(PRODUCT_BUNDLE_PACKAGE_TYPE)',
-    NSExtension: {
-      NSExtensionAttributes: {
-        NSExtensionActivationRule: {
-          NSExtensionActivationSupportsReplayKitStreaming: true,
-        },
-      },
-      NSExtensionPointIdentifier: 'com.apple.broadcast-services-setupui',
-      NSExtensionPrincipalClass:
-        '$(PRODUCT_MODULE_NAME).BroadcastSetupViewController',
-    },
-    AppGroupIdentifier: getAppGroup(appIdentifier, props),
-  });
-}
+// export function getBroadcastExtensionSetupUIInfoContent(
+//   appName: ConfigPlugin<ConfigProps>['name'],
+//   appIdentifier: string,
+//   props: ConfigProps
+// ) {
+//   return plist.build({
+//     CFBundleName: '$(PRODUCT_NAME)',
+//     CFBundleDisplayName: `${appName} - Broadcast Extension Setup UI`,
+//     CFBundleIdentifier: '$(PRODUCT_BUNDLE_IDENTIFIER)',
+//     CFBundleDevelopmentRegion: '$(DEVELOPMENT_LANGUAGE)',
+//     CFBundleExecutable: '$(EXECUTABLE_NAME)',
+//     CFBundleInfoDictionaryVersion: '6.0',
+//     CFBundlePackageType: '$(PRODUCT_BUNDLE_PACKAGE_TYPE)',
+//     NSExtension: {
+//       NSExtensionAttributes: {
+//         NSExtensionActivationRule: {
+//           NSExtensionActivationSupportsReplayKitStreaming: true,
+//         },
+//       },
+//       NSExtensionPointIdentifier: 'com.apple.broadcast-services-setupui',
+//       NSExtensionPrincipalClass:
+//         '$(PRODUCT_MODULE_NAME).BroadcastSetupViewController',
+//     },
+//     AppGroupIdentifier: getAppGroup(appIdentifier, props),
+//   });
+// }
 
 //: [root]/ios/BroadcastExtension/PrivacyInfo.xcprivacy
 export function getMainExtensionPrivacyInfoFilePath(

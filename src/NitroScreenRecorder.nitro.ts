@@ -1,5 +1,11 @@
 import type { HybridObject } from 'react-native-nitro-modules';
-import type { PermissionResponse, ScreenRecordingFile } from './types';
+import type {
+  CameraDevice,
+  RecorderCameraStyle,
+  PermissionResponse,
+  ScreenRecordingFile,
+  ScreenRecordingEvent,
+} from './types';
 /**
  * After any change to this file, you have to run
  * `yarn prepare` in the root project folder. This
@@ -17,17 +23,30 @@ import type { PermissionResponse, ScreenRecordingFile } from './types';
 
 export interface NitroScreenRecorder
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
+  /**
+   * PERMISSIONS SECTION
+   */
   getCameraPermissionStatus(): Promise<PermissionResponse>;
   getMicrophonePermissionStatus(): Promise<PermissionResponse>;
   requestCameraPermission(): Promise<PermissionResponse>;
   requestMicrophonePermission(): Promise<PermissionResponse>;
+  /**Screen Recording */
+  addScreenRecordingListener(
+    callback: (event: ScreenRecordingEvent) => void
+  ): number;
+  removeScreenRecordingListener(id: number): void;
   startInAppRecording(
     enableMic: boolean,
     enableCamera: boolean,
+    cameraPreviewStyle: RecorderCameraStyle,
+    cameraDevice: CameraDevice,
     onRecordingFinished: (file: ScreenRecordingFile) => void
-    // onRecordingError: (error: string) => void
+    // onRecordingError: (error: RecordingError) => void
   ): void;
-  startGlobalRecording(): void;
   stopInAppRecording(): void;
-  clearFiles(): void;
+  cancelInAppRecording(): void;
+  startGlobalRecording(): void;
+  getLastGlobalRecording(): ScreenRecordingFile | undefined;
+
+  clearRecordingCache(): void;
 }

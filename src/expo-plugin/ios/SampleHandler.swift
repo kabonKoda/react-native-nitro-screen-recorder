@@ -11,255 +11,158 @@ class SampleHandler: RPBroadcastSampleHandler {
 
   private var isRecording = false
   private var recordingURL: URL?
-  private var enableMicrophone = true
-  private var enableCamera = false
+  private var enableMicrophone = false
   private var recordingId: String?
+  private var startTime: Date?
 
   override func broadcastStarted(withSetupInfo setupInfo: [String: NSObject]?) {
-    print("=== Broadcast Extension Started ===")
-    print("Setup info: \(setupInfo ?? [:])")
+    NSLog("🚀 [Ext] broadcastStarted: setupInfo=\(setupInfo ?? [:])")
+    startTime = Date()
 
-    // Validate app group access first
+    enableMicrophone =
+      (setupInfo?["RPBroadcastProcessExtensionMicrophoneEnabled"] as? Bool) ?? false
+    recordingId = UUID().uuidString
+    NSLog("✅ [Ext] mic=\(enableMicrophone), recordingId=\(recordingId!)")
+
     guard let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
     else {
-      let error = NSError(
-        domain: "BroadcastSampleHandler", code: -1,
-        userInfo: [NSLocalizedDescriptionKey: "AppGroupIdentifier not found in Info.plist"])
-      print("❌ AppGroupIdentifier missing from broadcast extension Info.plist")
-      finishBroadcastWithError(error)
+      NSLog("❌ [Ext] Missing AppGroupIdentifier in Info.plist")
+      finishBroadcastWithError(NSError(domain: "", code: -1, userInfo: nil))
       return
     }
+    NSLog("🔍 [Ext] AppGroupIdentifier=\(appGroupId)")
 
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      let error = NSError(
-        domain: "BroadcastSampleHandler", code: -2,
-        userInfo: [NSLocalizedDescriptionKey: "Cannot access app group container: \(appGroupId)"])
-      print("❌ Cannot access app group: \(appGroupId)")
-      finishBroadcastWithError(error)
-      return
-    }
-
-    print("✅ App group access verified: \(appGroupId)")
-
-    // Read preferences from shared container
-    readRecordingPreferences()
-
-    print("✅ Broadcast started with mic: \(enableMicrophone), camera: \(enableCamera)")
     setupRecording()
   }
 
-  private func readRecordingPreferences() {
-    guard
-      let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
-      let containerURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: appGroupId)
-    else {
-      print("Could not access shared container for preferences - using defaults")
-      enableMicrophone = true
-      enableCamera = false
-      recordingId = UUID().uuidString
-      return
-    }
-
-    let preferencesFile = containerURL.appendingPathComponent("recording_preferences.json")
-
-    guard let jsonData = try? Data(contentsOf: preferencesFile),
-      let preferences = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
-    else {
-      print("Could not read recording preferences - using defaults")
-      enableMicrophone = true
-      enableCamera = false
-      recordingId = UUID().uuidString
-      return
-    }
-
-    enableMicrophone = preferences["enableMicrophone"] as? Bool ?? true
-    enableCamera = preferences["enableCamera"] as? Bool ?? false
-    recordingId = preferences["recordingId"] as? String ?? UUID().uuidString
-
-    print(
-      "Read preferences: mic=\(enableMicrophone), camera=\(enableCamera), id=\(recordingId ?? "none")"
-    )
-  }
-
-  override func broadcastPaused() {
-    print("Broadcast paused")
-  }
-
-  override func broadcastResumed() {
-    print("Broadcast resumed")
-  }
-
-  override func broadcastFinished() {
-    print("Broadcast finished")
-    finishRecording()
-  }
-
-  override func processSampleBuffer(
-    _ sampleBuffer: CMSampleBuffer, with sampleBufferType: RPSampleBufferType
-  ) {
-    switch sampleBufferType {
-    case .video:
-      handleVideoSampleBuffer(sampleBuffer)
-    case .audioApp:
-      handleAudioAppSampleBuffer(sampleBuffer)
-    case .audioMic:
-      if enableMicrophone {
-        handleAudioMicSampleBuffer(sampleBuffer)
-      }
-    @unknown default:
-      break
-    }
-  }
-
   private func setupRecording() {
+    NSLog("🔍 [Ext] setupRecording()")
     guard
       let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
       let containerURL = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: appGroupId)
     else {
-      finishBroadcastWithError(
-        NSError(
-          domain: "BroadcastSampleHandler", code: -1,
-          userInfo: [NSLocalizedDescriptionKey: "Could not access shared container"]))
+      NSLog("❌ [Ext] Cannot access app group container")
+      finishBroadcastWithError(NSError(domain: "", code: -2, userInfo: nil))
       return
     }
 
-    // Create recordings directory
-    let recordingsURL = containerURL.appendingPathComponent("recordings")
-    do {
-      try FileManager.default.createDirectory(at: recordingsURL, withIntermediateDirectories: true)
-    } catch {
-      print("Error creating recordings directory: \(error)")
-      finishBroadcastWithError(error)
-      return
-    }
-
-    // Create output file
-    let fileName = "\(recordingId ?? UUID().uuidString)_\(Int(Date().timeIntervalSince1970)).mp4"
-    recordingURL = recordingsURL.appendingPathComponent(fileName)
-
-    guard let outputURL = recordingURL else {
-      finishBroadcastWithError(
-        NSError(
-          domain: "BroadcastSampleHandler", code: -2,
-          userInfo: [NSLocalizedDescriptionKey: "Could not create output URL"]))
-      return
-    }
+    let recordingsDir = containerURL.appendingPathComponent("recordings")
+    NSLog("🔍 [Ext] recordingsDir=\(recordingsDir.path)")
+    try? FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
+    recordingURL = recordingsDir.appendingPathComponent("\(recordingId!).mp4")
+    NSLog("🔍 [Ext] recordingURL=\(recordingURL!.path)")
 
     do {
-      // Create asset writer
-      assetWriter = try AVAssetWriter(outputURL: outputURL, fileType: .mp4)
+      assetWriter = try AVAssetWriter(outputURL: recordingURL!, fileType: .mp4)
 
-      // Video settings - Get actual screen dimensions
+      // Video
       let screenSize = UIScreen.main.bounds.size
       let scale = UIScreen.main.scale
       let width = Int(screenSize.width * scale)
       let height = Int(screenSize.height * scale)
-
       let videoSettings: [String: Any] = [
         AVVideoCodecKey: AVVideoCodecType.h264,
         AVVideoWidthKey: width,
         AVVideoHeightKey: height,
-        AVVideoCompressionPropertiesKey: [
-          AVVideoAverageBitRateKey: 8_000_000,
-          AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-        ],
       ]
-
       videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: videoSettings)
       videoInput?.expectsMediaDataInRealTime = true
-
-      if let videoInput = videoInput, assetWriter!.canAdd(videoInput) {
-        assetWriter!.add(videoInput)
+      if let v = videoInput, assetWriter!.canAdd(v) {
+        assetWriter!.add(v)
+        NSLog("✅ [Ext] Added videoInput")
       }
 
-      // Audio app settings
+      // App audio
       let audioAppSettings: [String: Any] = [
         AVFormatIDKey: kAudioFormatMPEG4AAC,
         AVSampleRateKey: 44100,
         AVNumberOfChannelsKey: 2,
-        AVEncoderBitRateKey: 128000,
       ]
-
       audioAppInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioAppSettings)
       audioAppInput?.expectsMediaDataInRealTime = true
-
-      if let audioAppInput = audioAppInput, assetWriter!.canAdd(audioAppInput) {
-        assetWriter!.add(audioAppInput)
+      if let a = audioAppInput, assetWriter!.canAdd(a) {
+        assetWriter!.add(a)
+        NSLog("✅ [Ext] Added audioAppInput")
       }
 
-      // Audio mic settings (if enabled)
+      // Mic audio
       if enableMicrophone {
         let audioMicSettings: [String: Any] = [
           AVFormatIDKey: kAudioFormatMPEG4AAC,
           AVSampleRateKey: 44100,
           AVNumberOfChannelsKey: 1,
-          AVEncoderBitRateKey: 64000,
         ]
-
         audioMicInput = AVAssetWriterInput(mediaType: .audio, outputSettings: audioMicSettings)
         audioMicInput?.expectsMediaDataInRealTime = true
-
-        if let audioMicInput = audioMicInput, assetWriter!.canAdd(audioMicInput) {
-          assetWriter!.add(audioMicInput)
+        if let m = audioMicInput, assetWriter!.canAdd(m) {
+          assetWriter!.add(m)
+          NSLog("✅ [Ext] Added audioMicInput")
         }
       }
 
       isRecording = true
-      print("✅ Recording setup completed successfully")
-
+      NSLog("✅ [Ext] setupRecording complete")
     } catch {
-      print("❌ Error setting up recording: \(error.localizedDescription)")
-      finishBroadcastWithError(error)
+      NSLog("❌ [Ext] setupRecording error: \(error.localizedDescription)")
+      finishBroadcastWithError(error as NSError)
     }
   }
 
-  private func handleVideoSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-    guard isRecording else { return }
+  override func processSampleBuffer(
+    _ sampleBuffer: CMSampleBuffer,
+    with sampleBufferType: RPSampleBufferType
+  ) {
+    guard isRecording, let writer = assetWriter else { return }
 
-    if assetWriter?.status == .unknown {
-      assetWriter?.startWriting()
-      assetWriter?.startSession(atSourceTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
-      print("Asset writer started")
-    }
+    switch sampleBufferType {
+    case .video:
+      if writer.status == .unknown {
+        writer.startWriting()
+        writer.startSession(atSourceTime: CMSampleBufferGetPresentationTimeStamp(sampleBuffer))
+        NSLog(
+          "📸 [Ext] Asset writer started at \(CMSampleBufferGetPresentationTimeStamp(sampleBuffer))")
+      }
+      if let vIn = videoInput, vIn.isReadyForMoreMediaData {
+        let success = vIn.append(sampleBuffer)
+        NSLog(
+          success
+            ? "🎞 [Ext] Appended video buffer"
+            : "⚠️ [Ext] Failed to append video buffer")
+      }
 
-    if let videoInput = videoInput,
-      videoInput.isReadyForMoreMediaData,
-      assetWriter?.status == .writing
-    {
-      videoInput.append(sampleBuffer)
+    case .audioApp:
+      if let aIn = audioAppInput, aIn.isReadyForMoreMediaData {
+        let success = aIn.append(sampleBuffer)
+        NSLog(
+          success
+            ? "🔊 [Ext] Appended app-audio buffer"
+            : "⚠️ [Ext] Failed to append app-audio buffer")
+      }
+
+    case .audioMic:
+      if enableMicrophone, let mIn = audioMicInput, mIn.isReadyForMoreMediaData {
+        let success = mIn.append(sampleBuffer)
+        NSLog(
+          success
+            ? "🎤 [Ext] Appended mic-audio buffer"
+            : "⚠️ [Ext] Failed to append mic-audio buffer")
+      }
+
+    @unknown default:
+      NSLog("⚠️ [Ext] Unknown sampleBufferType: \(sampleBufferType)")
     }
   }
 
-  private func handleAudioAppSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-    guard isRecording else { return }
-
-    if let audioAppInput = audioAppInput,
-      audioAppInput.isReadyForMoreMediaData,
-      assetWriter?.status == .writing
-    {
-      audioAppInput.append(sampleBuffer)
-    }
-  }
-
-  private func handleAudioMicSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
-    guard isRecording, enableMicrophone else { return }
-
-    if let audioMicInput = audioMicInput,
-      audioMicInput.isReadyForMoreMediaData,
-      assetWriter?.status == .writing
-    {
-      audioMicInput.append(sampleBuffer)
-    }
+  override func broadcastFinished() {
+    NSLog("🛑 [Ext] broadcastFinished()")
+    finishRecording()
   }
 
   private func finishRecording() {
     guard isRecording else { return }
-
     isRecording = false
-    print("Finishing recording...")
+    NSLog("🔚 [Ext] finishRecording() - marking inputs finished")
 
     videoInput?.markAsFinished()
     audioAppInput?.markAsFinished()
@@ -267,43 +170,56 @@ class SampleHandler: RPBroadcastSampleHandler {
 
     assetWriter?.finishWriting { [weak self] in
       guard let self = self else { return }
-
+      NSLog("🔍 [Ext] finishWriting callback; status=\(self.assetWriter?.status.rawValue ?? -1)")
       if self.assetWriter?.status == .completed {
-        print("✅ Recording completed successfully")
-        self.notifyMainApp()
-      } else if let error = self.assetWriter?.error {
-        print("❌ Recording failed with error: \(error.localizedDescription)")
-        self.finishBroadcastWithError(error)
+        NSLog("✅ [Ext] Asset writer completed successfully")
+        self.createRecordingMetadata()
+      } else if let err = self.assetWriter?.error {
+        NSLog("❌ [Ext] Asset writer error: \(err.localizedDescription)")
+        self.finishBroadcastWithError(err as NSError)
       }
     }
   }
 
-  private func notifyMainApp() {
+  private func createRecordingMetadata() {
+    NSLog("🔍 [Ext] createRecordingMetadata() for URL=\(recordingURL?.path ?? "nil")")
     guard
       let appGroupId = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
       let containerURL = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: appGroupId),
-      let recordingURL = recordingURL
+      let recURL = recordingURL,
+      let start = startTime
     else {
-      print("Could not access shared container for notification")
+      NSLog("❌ [Ext] createRecordingMetadata: missing prerequisites")
       return
     }
 
-    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
+    let recordingsDir = containerURL.appendingPathComponent("recordings")
+    let metadataFile = recordingsDir.appendingPathComponent(
+      "\(recordingId! )_metadata.json"
+    )
 
-    let recordingInfo: [String: Any] = [
-      "filePath": recordingURL.path,
-      "fileName": recordingURL.lastPathComponent,
-      "timestamp": Date().timeIntervalSince1970,
-      "recordingId": recordingId ?? "unknown",
+    let metadata: [String: Any] = [
+      "recordingId": recordingId!,
+      "path": recURL.path,
+      "name": recURL.lastPathComponent,
+      "size": (try? FileManager.default.attributesOfItem(atPath: recURL.path)[.size] as? Int) ?? 0,
+      "duration": Date().timeIntervalSince(start),
+      "timestampCreated": start.timeIntervalSince1970,
+      "timestampFinished": Date().timeIntervalSince1970,
+      "enabledMicrophone": enableMicrophone,
+      "status": "completed",
     ]
 
     do {
-      let jsonData = try JSONSerialization.data(withJSONObject: recordingInfo)
-      try jsonData.write(to: notificationFile)
-      print("✅ Notification file written successfully - main app will detect via polling")
+      let jsonData = try JSONSerialization.data(withJSONObject: metadata, options: .prettyPrinted)
+      try jsonData.write(to: metadataFile)
+      NSLog("✅ [Ext] Wrote metadata to \(metadataFile.path)")
+
+      let dirList = try FileManager.default.contentsOfDirectory(atPath: recordingsDir.path)
+      NSLog("🔍 [Ext] recordingsDir now contains: \(dirList)")
     } catch {
-      print("❌ Error notifying main app: \(error.localizedDescription)")
+      NSLog("❌ [Ext] createRecordingMetadata error: \(error.localizedDescription)")
     }
   }
 }

@@ -8,70 +8,84 @@ enum RecorderError: Error {
 }
 
 typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
+typealias ScreenRecordingListener = (ScreenRecordingEvent) -> Void
+
+struct Listener<T> {
+  let id: Double
+  let callback: T
+}
 
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
-  private let recorder = RPScreenRecorder.shared()
-  private var activeBroadcastController: RPBroadcastController?
 
-  private var onRecordingFinishedCallback: RecordingFinishedCallback?
-  private var isGlobalRecording = false
-  private var globalRecordingId: String?
+  let recorder = RPScreenRecorder.shared()
+  private var inAppRecordingActive: Bool = false
 
-  // Polling timer for checking broadcast extension completion
-  private var pollingTimer: Timer?
-
+  private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
+  private var onGlobalRecordingFinishedCallback: RecordingFinishedCallback?
+  private var recordingEventListeners: [Listener<ScreenRecordingListener>] = []
+  private var nextListenerId: Double = 0
+  
   override init() {
     super.init()
+    registerListener()
   }
 
   deinit {
-    stopPolling()
+    unregisterListener()
   }
 
-  private func mapAVAuthorizationStatusToPermissionResponse(_ status: AVAuthorizationStatus)
-    -> PermissionResponse
-  {
-    // -1 means that it never expires (default for iOS)
-    switch status {
-    case .authorized:
-      return PermissionResponse(
-        canAskAgain: false,
-        granted: true,
-        status: .granted,
-        expiresAt: -1
-      )
-    case .denied:
-      return PermissionResponse(
-        canAskAgain: false,
-        granted: false,
-        status: .denied,
-        expiresAt: -1
-      )
-    case .notDetermined:
-      return PermissionResponse(
-        canAskAgain: true,
-        granted: false,
-        status: .undetermined,
-        expiresAt: -1
-      )
-    case .restricted:
-      return PermissionResponse(
-        canAskAgain: false,
-        granted: false,
-        status: .denied,
-        expiresAt: -1
-      )
-    @unknown default:
-      return PermissionResponse(
-        canAskAgain: true,
-        granted: false,
-        status: .undetermined,
-        expiresAt: -1
-      )
-    }
+  func registerListener() {
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleScreenRecordingChange),
+      name: UIScreen.capturedDidChangeNotification,
+      object: nil
+    )
   }
 
+  func unregisterListener() {
+    NotificationCenter.default.removeObserver(
+      self,
+      name: UIScreen.capturedDidChangeNotification,
+      object: nil
+    )
+  }
+
+  @objc private func handleScreenRecordingChange() {
+      let type: RecordingEventType
+      let reason: RecordingEventReason
+      if UIScreen.main.isCaptured {
+        reason = .began
+        if(inAppRecordingActive) {
+          type = .withinapp
+        } else {
+          type = .global
+        }
+      } else {
+        reason = .ended
+        if(inAppRecordingActive) {
+          type = .withinapp
+        } else {
+          type = .global
+        }
+      }
+      let event = ScreenRecordingEvent(type: type, reason: reason)
+      recordingEventListeners.forEach { $0.callback(event) }
+  }
+  
+  func addScreenRecordingListener(callback: @escaping (ScreenRecordingEvent) -> Void) throws -> Double {
+    let listener = Listener(id: nextListenerId, callback: callback)
+    recordingEventListeners.append(listener)
+    nextListenerId += 1
+    return listener.id
+  }
+  
+  func removeScreenRecordingListener(id: Double) throws {
+    recordingEventListeners.removeAll { $0.id == id }
+  }
+  
+  // MARK: - Permission Methods
   public func getCameraPermissionStatus() throws -> Promise<PermissionResponse> {
     return Promise.async {
       let status = AVCaptureDevice.authorizationStatus(for: .video)
@@ -110,83 +124,171 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  private func getAppGroupIdentifier() throws -> String {
-    let appGroupIdentifier: String? =
-      Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
-
-    guard let appGroupIdentifier = appGroupIdentifier else {
-      throw RecorderError.error(
-        name: "APP_GROUP_IDENTIFIER_MISSING",
-        message: "appGroupIdentifier is nil"
-      )
-    }
-    return appGroupIdentifier
-  }
-
-  private func getBroadcastExtensionBundleId() -> String? {
-    guard
-      let mainAppBundleId = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier")
-        as? String
-    else {
-      return nil
-    }
-    return "\(mainAppBundleId).broadcast-extension"
-  }
-
+  // MARK: - In-App Recording
   func startInAppRecording(
     enableMic: Bool,
     enableCamera: Bool,
+    cameraPreviewStyle: RecorderCameraStyle,
+    cameraDevice: CameraDevice,
     onRecordingFinished: @escaping RecordingFinishedCallback
   ) throws {
+    safelyClearInAppRecordingFiles()
 
-    self.onRecordingFinishedCallback = onRecordingFinished
-    self.isGlobalRecording = false
-
-    guard self.recorder.isAvailable else {
+    guard recorder.isAvailable else {
       throw RecorderError.error(
         name: "SCREEN_RECORDER_UNAVAILABLE",
         message: "Screen recording is not available"
       )
     }
 
-    recorder.isCameraEnabled = enableCamera
+    if recorder.isRecording {
+      print("Recorder is already recording.")
+      return
+    }
+
+    if enableCamera {
+      let camStatus = AVCaptureDevice.authorizationStatus(for: .video)
+      guard camStatus == .authorized else {
+        throw RecorderError.error(
+          name: "CAMERA_PERMISSION_DENIED",
+          message: "Camera access is not authorized"
+        )
+      }
+    }
+    if enableMic {
+      let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+      guard micStatus == .authorized else {
+        throw RecorderError.error(
+          name: "MIC_PERMISSION_DENIED",
+          message: "Microphone access is not authorized"
+        )
+      }
+    }
+
+    self.onInAppRecordingFinishedCallback = onRecordingFinished
     recorder.isMicrophoneEnabled = enableMic
+    recorder.isCameraEnabled = enableCamera
+
+    if enableCamera {
+      let device: RPCameraPosition = (cameraDevice == .front) ? .front : .back
+      recorder.cameraPosition = device
+    }
+    inAppRecordingActive = true
     recorder.startRecording { [weak self] error in
+      guard let self = self else { return }
       if let error = error {
-        print("Error starting in-app recording: \(error.localizedDescription)")
+        print("❌ Error starting in-app recording:", error.localizedDescription)
+        inAppRecordingActive = false
+        return
+      }
+      print("✅ In-app recording started (mic:\(enableMic) camera:\(enableCamera))")
+
+      if enableCamera {
+        DispatchQueue.main.async {
+          self.setupAndDisplayCamera(style: cameraPreviewStyle)
+        }
       }
     }
   }
 
-  func startGlobalRecording() throws {
+  public func stopInAppRecording() throws {
+    // build a unique temp URL
+    let fileName = "screen_capture_\(UUID().uuidString).mp4"
+    let outputURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent(fileName)
 
-    self.isGlobalRecording = true
-    self.globalRecordingId = UUID().uuidString
+    // remove any existing file
+    try? FileManager.default.removeItem(at: outputURL)
 
-    guard recorder.isAvailable else {
-      throw RecorderError.error(
-        name: "SCREEN_RECORDER_UNAVAILABLE",
-        message: "Screen recording not available"
-      )
+    // call the new API
+    recorder.stopRecording(withOutput: outputURL) { [weak self] error in
+      guard let self = self else { return }
+
+      if let error = error {
+        print("❌ Error writing recording to \(outputURL):", error.localizedDescription)
+        return
+      }
+
+      do {
+        // read file attributes
+        let attrs = try FileManager.default.attributesOfItem(atPath: outputURL.path)
+        let asset = AVURLAsset(url: outputURL)
+        let duration = CMTimeGetSeconds(asset.duration)
+
+        // build your ScreenRecordingFile
+        let file = ScreenRecordingFile(
+          recordingId: UUID().uuidString,
+          path: outputURL.path,
+          name: outputURL.lastPathComponent,
+          size: attrs[.size] as? Double ?? 0,
+          duration: duration,
+          timestampCreated: Date(),
+          timestampFinished: Date(),
+          enabledMicrophone: self.recorder.isMicrophoneEnabled,
+          status: "completed"
+        )
+
+        print("✅ Recording finished and saved to:", outputURL.path)
+        // invoke your callback
+        self.onInAppRecordingFinishedCallback?(file)
+      } catch {
+        print("⚠️ Failed to build ScreenRecordingFile:", error.localizedDescription)
+      }
+    }
+  }
+
+  public func cancelInAppRecording() throws {
+    // If a recording session is in progress, stop it and write out to a temp URL
+    if recorder.isRecording {
+      let tempURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("canceled_\(UUID().uuidString).mp4")
+      recorder.stopRecording(withOutput: tempURL) { error in
+        if let error = error {
+          print("⚠️ Error stopping recording during cancel:", error.localizedDescription)
+        } else {
+          print("🗑️ In‑app recording stopped and wrote to temp URL (canceled):\(tempURL.path)")
+        }
+      }
     }
 
-    // Use direct broadcast controller creation
+    safelyClearInAppRecordingFiles()
+    print("🛑 In‑app recording canceled and buffers cleared")
+  }
+  /**
+      ----------- GLOBAL RECORDING SECTION ------------------
+   1. Generate a url to store the recording the app group in the JSON format:
+    {
+     path: `appGroupContainerUrl/uuid/screen_recording.mp4`,
+     timestampCreated: xx/xx/xxxx,
+     timestampFinished: xx/xx/xxx
+    },
+   2. When the user hits `Start Broadcast` in the Picker, the `SampleHandler.swift` finds the url with
+   the most recent `dateCreated` field and uses that path to store the recording in.
+   3. When the recording is finished (user taps on the red circle), the `SampleHandler.swift` updates the dateFinished.
+   4  (Alternatively) User calls stop global recording, which returns the path.
+   5. You then call the `getLatestGlobalRecording` and it will fetch that file.
+   6. When the user is done with the file, he can call clean files.
+   */
+
+  func presentGlobalBroadcastModal() {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
-      // Create the system broadcast picker
-      let broadcastPicker = RPSystemBroadcastPickerView(
-        frame: CGRect(x: 0, y: 0, width: 50, height: 50))
+      print("📱 Creating broadcast picker...")
 
-      // Set preferred extension if you have one
-      if let bundleID = getBroadcastExtensionBundleId() {
+      let broadcastPicker = RPSystemBroadcastPickerView(
+        frame: CGRect(x: 2000, y: 2000, width: 1, height: 1))
+
+      let bundleID = getBroadcastExtensionBundleId()
+      print("🎯 Preferred extension bundle ID: \(bundleID ?? "none")")
+
+      if let bundleID = bundleID {
         broadcastPicker.preferredExtension = bundleID
       }
 
-      // Style the picker (optional)
+      // Show microphone button - user can choose to enable/disable mic in the system picker
       broadcastPicker.showsMicrophoneButton = true
 
-      // Add to the current view temporarily
       guard
         let window = UIApplication.shared
           .connectedScenes
@@ -195,115 +297,173 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
           .windows
           .first(where: { $0.isKeyWindow })
       else {
+        print("❌ Could not find key window")
         return
       }
 
-      // Make it invisible but functional
+      // Make the picker invisible but functional
       broadcastPicker.alpha = 0.01
       window.addSubview(broadcastPicker)
 
-      // Programmatically trigger the picker
-      // This will show the system broadcast interface immediately
+      // Trigger the picker programmatically
       if let button = broadcastPicker.subviews.first(where: { $0 is UIButton }) as? UIButton {
+        print("✅ Found button, triggering...")
         button.sendActions(for: .touchUpInside)
+      } else {
+        print("❌ No button found in broadcast picker")
       }
 
-      // Clean up the picker view after a short delay
-      DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+      // Clean up the picker after a delay
+      DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+        print("🧹 Cleaning up broadcast picker")
         broadcastPicker.removeFromSuperview()
       }
 
-      // Start polling for completion
-      self.startPollingForCompletion()
     }
   }
 
-  func stopInAppRecording() {
-    activeBroadcastController?.finishBroadcast { [weak self] error in
-      if let error = error {
-        print("Error stopping broadcast:", error)
-      } else {
-        print("Broadcast stopped successfully")
-      }
-      self?.cleanupRecording()
+  func startGlobalRecording(onRecordingFinished: @escaping RecordingFinishedCallback) throws {
+    //    try? safelyClearGlobalRecordingFiles()
+    self.onGlobalRecordingFinishedCallback = onRecordingFinished
+    presentGlobalBroadcastModal()
+  }
+
+  func stopGlobalRecording() throws -> ScreenRecordingFile? {
+    print("🛑 Stopping global recording...")
+
+    return try getLatestGlobalRecording()
+  }
+
+  func getLatestGlobalRecording() throws -> ScreenRecordingFile? {
+    // 1️⃣ Resolve container
+    guard let appGroupId = try? getAppGroupIdentifier(),
+      let containerURL = FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
+    else {
+      throw RecorderError.error(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message: "Could not access app group container"
+      )
+    }
+
+    let recordingsDir = containerURL.appendingPathComponent("recordings")
+
+    // 🚨 Debug dump
+    print("🔍 [App] App Group ID: \(appGroupId)")
+    print("🔍 [App] Container URL: \(containerURL.path)")
+    print(
+      "🔍 [App] recordingsDir.exists: \(FileManager.default.fileExists(atPath: recordingsDir.path))")
+    do {
+      let rawNames = try FileManager.default.contentsOfDirectory(atPath: recordingsDir.path)
+      print("🔍 [App] recordingsDir listing: \(rawNames)")
+    } catch {
+      print("❌ [App] Failed to list recordingsDir: \(error)")
+    }
+
+    // 2️⃣ Find metadata files
+    let contents = try FileManager.default.contentsOfDirectory(
+      at: recordingsDir,
+      includingPropertiesForKeys: [.creationDateKey, .fileSizeKey]
+    )
+
+    let metadataFiles = contents.filter {
+      $0.lastPathComponent.hasSuffix("_metadata.json")
+    }
+    print("🔍 [App] metadataFiles found: \(metadataFiles.map { $0.lastPathComponent })")
+
+    guard
+      let latestMetaURL = metadataFiles.max(by: { a, b in
+        let d1 = (try? a.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+        let d2 = (try? b.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? .distantPast
+        return d1 < d2
+      })
+    else {
+      print("ℹ️ [App] No metadata to parse")
+      return nil
+    }
+    print("🔍 [App] Using metadata: \(latestMetaURL.path)")
+
+    // 3️⃣ Read & log metadata contents
+    let data = try Data(contentsOf: latestMetaURL)
+    guard let metadata = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      throw RecorderError.error(name: "INVALID_METADATA", message: "Could not parse JSON")
+    }
+    print("🔍 [App] Parsed metadata dict: \(metadata)")
+
+    // 4️⃣ Check video file
+    let videoPath = metadata["path"] as? String ?? ""
+    print("🔍 [App] Video path in metadata: \(videoPath)")
+    let exists = FileManager.default.fileExists(atPath: videoPath)
+    print("🔍 [App] FileManager.exists(videoPath): \(exists)")
+    if exists {
+      let attrs = try FileManager.default.attributesOfItem(atPath: videoPath)
+      print("🔍 [App] Video attributes: \(attrs)")
+    }
+
+    let recordingFile = ScreenRecordingFile(
+      recordingId: metadata["recordingId"] as? String ?? "unknown",
+      path: metadata["path"] as? String ?? "",
+      name: metadata["name"] as? String ?? "",
+      size: metadata["size"] as? Double ?? 0,
+      duration: metadata["duration"] as? Double ?? 0.0,
+      timestampCreated: Date(
+        timeIntervalSince1970: metadata["timestampCreated"] as? TimeInterval ?? 0),
+      timestampFinished: Date(
+        timeIntervalSince1970: metadata["timestampFinished"] as? TimeInterval ?? 0),
+      enabledMicrophone: metadata["enabledMicrophone"] as? Bool ?? false,
+      status: metadata["status"] as? String ?? "unknown"
+    )
+
+    // Verify the actual video file exists
+    if FileManager.default.fileExists(atPath: recordingFile.path) {
+      return recordingFile
+    } else {
+      print("⚠️ Metadata found but video file missing at: \(recordingFile.path)")
+      return nil
     }
   }
 
-  private func cleanupRecording() {
-    activeBroadcastController = nil
-    isGlobalRecording = false
-  }
-
-  func clearFiles() throws {
-    return
-  }
-
-  private func startPollingForCompletion() {
-    // Poll for completion notification from broadcast extension
-    Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-      guard let self = self, self.isGlobalRecording else {
-        timer.invalidate()
-        return
-      }
-
-      self.checkForCompletedRecording { completed in
-        if completed {
-          timer.invalidate()
-        }
-      }
-    }
-  }
-
-  private func stopPolling() {
-    pollingTimer?.invalidate()
-    pollingTimer = nil
-  }
-
-  private func checkForCompletedRecording(completion: @escaping (Bool) -> Void) {
+  func safelyClearGlobalRecordingFiles() throws {
     guard let appGroupId = try? getAppGroupIdentifier(),
       let containerURL = FileManager.default.containerURL(
         forSecurityApplicationGroupIdentifier: appGroupId)
     else {
-      completion(false)
-      return
-    }
-
-    let notificationFile = containerURL.appendingPathComponent("latest_recording.json")
-
-    guard let jsonData = try? Data(contentsOf: notificationFile),
-      let recordingInfo = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-      let filePath = recordingInfo["filePath"] as? String,
-      let fileName = recordingInfo["fileName"] as? String,
-      let timestamp = recordingInfo["timestamp"] as? TimeInterval
-    else {
-      completion(false)
-      return
-    }
-
-    // Check if this is a new recording (within last 5 seconds of when we started)
-    let recordingDate = Date(timeIntervalSince1970: timestamp)
-    let now = Date()
-
-    if now.timeIntervalSince(recordingDate) < 5 {
-      // Get file size and duration
-      let fileURL = URL(fileURLWithPath: filePath)
-      let fileSize =
-        (try? FileManager.default.attributesOfItem(atPath: filePath)[.size] as? Int64) ?? 0
-
-      let recordingFile = ScreenRecordingFile(
-        path: filePath,
-        duration: 0,
+      throw RecorderError.error(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message: "Could not access app group container"
       )
-
-      onRecordingFinishedCallback?(recordingFile)
-      cleanupRecording()
-
-      // Clean up notification file
-      try? FileManager.default.removeItem(at: notificationFile)
-
-      completion(true)
-    } else {
-      completion(false)
     }
+
+    let recordingsDir = containerURL.appendingPathComponent("recordings")
+
+    do {
+      if FileManager.default.fileExists(atPath: recordingsDir.path) {
+        let contents = try FileManager.default.contentsOfDirectory(
+          at: recordingsDir, includingPropertiesForKeys: nil)
+
+        for fileURL in contents {
+          try FileManager.default.removeItem(at: fileURL)
+          print("🗑️ Deleted: \(fileURL.lastPathComponent)")
+        }
+
+        print("✅ All recording files cleared")
+      }
+    } catch {
+      throw RecorderError.error(
+        name: "CLEANUP_FAILED",
+        message: "Could not clear recording files: \(error.localizedDescription)"
+      )
+    }
+  }
+
+  func safelyClearInAppRecordingFiles() {
+    recorder.discardRecording {
+      print("✅ In‑app recording discarded")
+    }
+  }
+
+  func clearRecordingCache() throws {
+    try safelyClearGlobalRecordingFiles()
+    safelyClearInAppRecordingFiles()
   }
 }
