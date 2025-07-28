@@ -36,9 +36,12 @@ const withScreenRecorder: ConfigPlugin<ConfigProps> = (config, props = {}) => {
   }
 
   /*---------------ANDROID-------------------- */
-  const androidPermissions = ['android.permission.CAMERA'];
+  const androidPermissions = [];
   if (props.enableMicrophonePermission !== false) {
     androidPermissions.push('android.permission.RECORD_AUDIO');
+  }
+  if (props.enableCameraPermission !== false) {
+    androidPermissions.push('android.permission.CAMERA');
   }
 
   return withPlugins(config, [

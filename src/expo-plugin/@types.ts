@@ -1,5 +1,10 @@
 export interface ConfigProps {
   /**
+   * Whether to enable camera permission
+   * @default true
+   */
+  enableCameraPermission?: boolean;
+  /**
    * Camera permission description text for iOS
    * @default "Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay"
    */

@@ -1,4 +1,4 @@
-package com.nitroscreenrecorder
+package com.margelo.nitro.nitroscreenrecorder
 
 import com.facebook.react.TurboReactPackage
 import com.facebook.react.bridge.NativeModule
