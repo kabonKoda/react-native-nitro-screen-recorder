@@ -19,10 +19,19 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Demo
 
-<div align="center">
-  <img src="./ios_inapp.jpg" width="30%" alt="IOS_In-App (With Camera)" style="display: inline-block; margin: 0 1%;">
-  <img src="./ios_global.jpg" width="30%" alt="IOS_Global" style="display: inline-block; margin: 0 1%;">
-  <img src="./android_global.jpg" width="30%" alt="Android_Global" style="display: inline-block; margin: 0 1%;">
+<div style="display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
+  <div style="text-align: center; margin: 0 1%;">
+    <h4>iOS In-App Recording</h4>
+    <img src="./ios_inapp.jpg" width="100%" alt="IOS_In-App (With Camera)">
+  </div>
+  <div style="text-align: center; margin: 0 1%;">
+    <h4>iOS Global Recording</h4>
+    <img src="./ios_global.jpg" width="100%" alt="IOS_Global">
+  </div>
+  <div style="text-align: center; margin: 0 1%;">
+    <h4>Android Global Recording</h4>
+    <img src="./android_global.jpg" width="100%" alt="Android_Global">
+  </div>
 </div>
 
 ## Installation
@@ -320,7 +329,7 @@ export default function ScreenRecorderExample() {
       </Text>
       
       <Button title="Start Global Recording" onPress={handleStartRecording} />
-      <Button title="Stop Recording" onPress={stopGlobalRecording} />
+      <Button title="Stop Recording" onPress={stopGlobalRecording} /> // Android Only
       
       {isLoading && <Text>Processing recording...</Text>}
       {isError && (
@@ -618,11 +627,11 @@ startGlobalRecording({
 
 ### `stopGlobalRecording(): void`
 
-Stops the current global screen recording and saves the video. The recorded file can be retrieved using `getLastGlobalRecording()`.
+Stops the current global screen recording and saves the video. The recorded file can be retrieved using `getLastGlobalRecording()`. Recommend using the `useGlobalRecording()` hook for managing getting the files.
 
-**Note:** On iOS, global recordings are primarily stopped by the user interacting with the system's red status bar indicator (or control center). This function provides a programmatic stop for Android.
+**Note:** On iOS, global recordings are stopped by the user interacting with the system's red status bar indicator (or control center). This function provides a programmatic stop for Android Only.
 
-**Platform:** Android, iOS (programmatic stop is effective on Android, but iOS primarily relies on system UI interaction for stopping global recordings initiated by `RPSystemBroadcastPickerView`).
+**Platform:** Android (programmatic stop is effective on Android, but iOS relies on system UI interaction for stopping global recordings initiated by `RPSystemBroadcastPickerView`).
 
 **Example:**
 ```typescript
