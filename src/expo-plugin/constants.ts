@@ -1,4 +1,4 @@
-import { ConfigProps } from './@types';
+import type { ConfigProps } from './@types';
 
 export const broadcastExtensionName = 'BroadcastExtension';
 

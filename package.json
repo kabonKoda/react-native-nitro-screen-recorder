@@ -2,7 +2,11 @@
   "name": "react-native-nitro-screen-recorder",
   "version": "0.1.0",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
-  "main": "./lib/module/index.js",
+  "main": "lib/commonjs/index",
+  "module": "lib/module/index",
+  "types": "lib/typescript/src/index.d.ts",
+  "react-native": "src/index",
+  "source": "src/index",
   "files": [
     "src",
     "lib",
@@ -139,13 +143,13 @@
           "clean": "nitrogen/"
         }
       ],
+      "module",
       [
-        "module",
+      "typescript",
         {
-          "esm": true
+          "project": "tsconfig.json"
         }
       ],
-      "typescript",
       "commonjs"
     ]
   },
