@@ -61,7 +61,6 @@ export default {
           cameraPermissionText: "Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay",
           enableMicrophonePermission: true,
           microphonePermissionText: "Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio",
-          enableGlobalRecording: true,
           iosAppGroupIdentifier: "group.com.yourcompany.yourapp.screenrecording",
           showPluginLogs: false
         }
@@ -80,7 +79,6 @@ export default {
 | `enableMicrophonePermission` | `boolean` | iOS, Android | `true` | Whether to enable microphone permission for screen recording with audio capture |
 | `microphonePermissionText` | `string` | iOS | `"Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio"` | Microphone permission description text displayed in iOS permission dialog |
 | `disableExperimental` | `boolean` | iOS | `false` | Whether to disable the experimental Expo appExtensions configuration. When true, skips applying the broadcast extension configuration |
-| `enableGlobalRecording` | `boolean` | iOS, Android | `false` | Whether to enable global screen recording that continues even when the app is backgrounded |
 | `iosAppGroupIdentifier` | `string` | iOS | `"group.${PRODUCT_BUNDLE_IDENTIFIER}.screenrecording"` | App Group identifier used to share data between the main app and its extensions |
 | `showPluginLogs` | `boolean` | iOS, Android | `false` | Whether to display detailed plugin logs during the build process |
 
