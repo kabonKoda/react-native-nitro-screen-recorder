@@ -19,16 +19,16 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Demo
 
-<div style="display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap;">
-  <div style="text-align: center; margin: 0 1%;">
+<div style="display: flex; justify-content: center; align-items: flex-start; flex-wrap: wrap; gap: 1%;">
+  <div style="flex: 0 0 32%; text-align: center;">
     <h4>iOS In-App Recording</h4>
     <img src="./ios_inapp.jpg" width="100%" alt="IOS_In-App (With Camera)">
   </div>
-  <div style="text-align: center; margin: 0 1%;">
+  <div style="flex: 0 0 32%; text-align: center;">
     <h4>iOS Global Recording</h4>
     <img src="./ios_global.jpg" width="100%" alt="IOS_Global">
   </div>
-  <div style="text-align: center; margin: 0 1%;">
+  <div style="flex: 0 0 32%; text-align: center;">
     <h4>Android Global Recording</h4>
     <img src="./android_global.jpg" width="100%" alt="Android_Global">
   </div>
