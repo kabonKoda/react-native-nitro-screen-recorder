@@ -60,16 +60,20 @@ export default function App() {
 
   // In-App Recording Functions
   const handleStartInAppRecording = async () => {
-    await ScreenRecorder.startInAppRecording({
-      options,
-      onRecordingFinished(file) {
-        console.log(
-          'In-app recording finished:',
-          JSON.stringify(file, null, 2)
-        );
-        setInAppRecording(file);
-      },
-    });
+    try {
+      await ScreenRecorder.startInAppRecording({
+        options,
+        onRecordingFinished(file) {
+          console.log(
+            'In-app recording finished:',
+            JSON.stringify(file, null, 2)
+          );
+          setInAppRecording(file);
+        },
+      });
+    } catch (error) {
+      console.error('❌ Error starting recording:', error);
+    }
   };
 
   const handleStopInAppRecording = () => {
@@ -84,6 +88,10 @@ export default function App() {
   // Global Recording Functions
   const handleStartGlobalRecording = () => {
     ScreenRecorder.startGlobalRecording();
+  };
+
+  const handleStopGlobalRecording = () => {
+    ScreenRecorder.stopGlobalRecording();
   };
 
   const handleGetGlobalRecordingFile = () => {
@@ -178,7 +186,14 @@ export default function App() {
             <Button
               title="Start Global"
               onPress={handleStartGlobalRecording}
-              color="#FF9500"
+              color="#34C759"
+            />
+          </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              title="Stop Global"
+              onPress={handleStopGlobalRecording}
+              color="#FF3B30"
             />
           </View>
           <View style={styles.buttonContainer}>

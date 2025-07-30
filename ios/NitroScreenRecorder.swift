@@ -306,6 +306,10 @@ func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
     presentGlobalBroadcastModal()
   }
 
+  func stopGlobalRecording() throws {
+    // no-op
+  }
+
   func getLastGlobalRecording() throws -> ScreenRecordingFile? {
     // 1) Resolve app group doc dir
     guard let appGroupId = try? getAppGroupIdentifier(),

@@ -6,6 +6,7 @@ import {
 import type { ConfigPlugin } from '@expo/config-plugins';
 import type { ConfigProps } from './@types';
 import { withBroadcastExtension } from './ios/withBroadcastExtension';
+import { withAndroidScreenRecording } from './android/withAndroidScreenRecording';
 
 const pkg: { name: string; version: string } = require('../../../package.json');
 
@@ -31,21 +32,23 @@ const withScreenRecorder: ConfigPlugin<ConfigProps> = (config, props = {}) => {
       MICROPHONE_USAGE;
   }
 
-  if (props.enableGlobalRecording) {
-    config = withBroadcastExtension(config, props);
-  }
+  config = withBroadcastExtension(config, props);
 
   /*---------------ANDROID-------------------- */
-  const androidPermissions = [];
-  if (props.enableMicrophonePermission !== false) {
-    androidPermissions.push('android.permission.RECORD_AUDIO');
-  }
-  if (props.enableCameraPermission !== false) {
-    androidPermissions.push('android.permission.CAMERA');
-  }
+  const androidPermissions: string[] = [
+    // already conditionally added
+    ...(props.enableMicrophonePermission !== false
+      ? ['android.permission.RECORD_AUDIO']
+      : []),
+    'android.permission.FOREGROUND_SERVICE',
+    'android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION',
+    'android.permission.POST_NOTIFICATIONS',
+  ];
 
   return withPlugins(config, [
+    // Android plugins
     [AndroidConfig.Permissions.withPermissions, androidPermissions],
+    [withAndroidScreenRecording, props],
   ]);
 };
 

@@ -8,9 +8,6 @@ import { withBroadcastExtensionConfig } from './withBroadcastExtensionConfig';
 export const withBroadcastExtension: ConfigPlugin<
   ConfigProps & { enabled?: boolean }
 > = (config, props = {}) => {
-  if (!props.enableGlobalRecording) {
-    return config;
-  }
   return withPlugins(config, [
     [withMainAppAppGroupInfoPlist, props],
     [withMainAppAppGroupEntitlement, props],

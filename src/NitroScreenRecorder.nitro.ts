@@ -7,35 +7,41 @@ import type {
   ScreenRecordingEvent,
   PermissionStatus,
 } from './types';
+
 /**
+ * ============================================================================
+ * NOTES WITH NITRO-MODULES
+ * ============================================================================
  * After any change to this file, you have to run
  * `yarn prepare` in the root project folder. This
  * uses `npx expo prebuild --clean` under the hood
  *
- * NOTE: WITH NITROMODULES, DO NOT USE AN OBJECT
- * AS AN INPUT TO ANY FUNCTION, YOU WILL GET SWIFT
- * COMPILE ERRORS THAT GIVE YOU CANCER. JUST BREAK
- * THE OBJECTS INTO INDIVIDUAL PROPERTIES
  */
-// type User = {
-//   name: string;
-//   address: string;
-// };
 
 export interface NitroScreenRecorder
   extends HybridObject<{ ios: 'swift'; android: 'kotlin' }> {
-  /**
-   * PERMISSIONS SECTION
-   */
+  // ============================================================================
+  // PERMISSIONS
+  // ============================================================================
+
   getCameraPermissionStatus(): PermissionStatus;
   getMicrophonePermissionStatus(): PermissionStatus;
   requestCameraPermission(): Promise<PermissionResponse>;
   requestMicrophonePermission(): Promise<PermissionResponse>;
-  /**Screen Recording */
+
+  // ============================================================================
+  // EVENT LISTENERS
+  // ============================================================================
+
   addScreenRecordingListener(
     callback: (event: ScreenRecordingEvent) => void
   ): number;
   removeScreenRecordingListener(id: number): void;
+
+  // ============================================================================
+  // IN-APP RECORDING
+  // ============================================================================
+
   startInAppRecording(
     enableMic: boolean,
     enableCamera: boolean,
@@ -46,8 +52,18 @@ export interface NitroScreenRecorder
   ): void;
   stopInAppRecording(): void;
   cancelInAppRecording(): void;
+
+  // ============================================================================
+  // GLOBAL RECORDING
+  // ============================================================================
+
   startGlobalRecording(): void;
+  stopGlobalRecording(): void;
   getLastGlobalRecording(): ScreenRecordingFile | undefined;
+
+  // ============================================================================
+  // UTILITIES
+  // ============================================================================
 
   clearRecordingCache(): void;
 }
