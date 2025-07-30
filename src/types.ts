@@ -93,7 +93,7 @@ export type CameraDevice = 'front' | 'back';
  *
  * @example
  * ```typescript
- * // With camera enabled
+ * // With camera enabled (iOS only)
  * const withCamera: RecordingOptions = {
  *   enableMic: true,
  *   enableCamera: true,
@@ -112,7 +112,7 @@ export type InAppRecordingOptions =
   | {
       /** Whether to record microphone audio */
       enableMic: boolean;
-      /** Camera is enabled - requires camera options */
+      /** iOS Only: Camera is enabled - requires camera options */
       enableCamera: true;
       /** Styling for camera preview overlay */
       cameraPreviewStyle: RecorderCameraStyle;
@@ -151,27 +151,34 @@ export type InAppRecordingInput = {
   onRecordingFinished: (file: ScreenRecordingFile) => void;
 };
 
+/**
+ * Options for a global screen recording session.
+ */
 export type GlobalRecordingInputOptions = {
-  /** Whether to record microphone audio */
+  /** Whether to record microphone audio during the global recording. */
   enableMic: boolean;
 };
 
 /**
- * Configuration for global recording sessions.
- * Currently used for error handling callbacks.
+ * Complete input configuration for starting a global recording session.
  *
  * @example
  * ```typescript
  * const globalInput: GlobalRecordingInput = {
+ *   options: {
+ *     enableMic: true, // Enable microphone audio for the recording
+ *   },
  *   onRecordingError: (error) => {
- *     console.error('Recording failed:', error.message);
+ *     console.error('Global recording failed:', error.message);
+ *     // Handle the error, e.g., display an alert to the user.
  *   }
  * };
  * ```
  */
 export type GlobalRecordingInput = {
+  /** Optional configuration options for the global recording session. */
   options?: GlobalRecordingInputOptions;
-  /** Callback invoked when recording encounters an error */
+  /** Callback invoked when the global recording encounters an error during start or execution. */
   onRecordingError: (error: RecordingError) => void;
 };
 

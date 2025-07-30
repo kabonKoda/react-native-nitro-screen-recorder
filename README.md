@@ -8,14 +8,14 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Features
 
-- **In-App Recording** (iOS only) - Record your app's content with camera overlay
-- **Global Screen Recording** - System-wide screen capture (iOS & Android)
-- **Camera Integration** - Front/back camera overlay with customizable positioning
-- **Audio Recording** - Microphone support with permission management
-- **Event Listeners** - Real-time recording status updates
-- **File Management** - Automatic file handling and cache management
-- **Permission Management** - Built-in camera and microphone permission handling
-- **React Hooks** - Convenient hooks for permissions and global recording management
+-   **In-App Recording** (iOS only) - Record your app's content with camera overlay
+-   **Global Screen Recording** - System-wide screen capture (iOS & Android)
+-   **Camera Integration** - Front/back camera overlay with customizable positioning
+-   **Audio Recording** - Microphone support with permission management
+-   **Event Listeners** - Real-time recording status updates
+-   **File Management** - Automatic file handling and cache management
+-   **Permission Management** - Built-in camera and microphone permission handling
+-   **React Hooks** - Convenient hooks for permissions and global recording management
 
 ## Demo
 
@@ -101,12 +101,12 @@ Add the following permissions to your `ios/YourApp/Info.plist`:
 
 ### 2. Create App Group
 
-1. Open your project in Xcode
-2. Select your main app target
-3. Go to **Signing & Capabilities**
-4. Click **+ Capability** and add **App Groups**
-5. Create a new app group with identifier: `group.com.yourcompany.yourapp.screenrecording`
-6. Add the App Group identifier to your `Info.plist`:
+1.  Open your project in Xcode
+2.  Select your main app target
+3.  Go to **Signing & Capabilities**
+4.  Click **+ Capability** and add **App Groups**
+5.  Create a new app group with identifier: `group.com.yourcompany.yourapp.screenrecording`
+6.  Add the App Group identifier to your `Info.plist`:
 
 ```xml
 <key>AppGroupIdentifier</key>
@@ -115,27 +115,27 @@ Add the following permissions to your `ios/YourApp/Info.plist`:
 
 ### 3. Create Broadcast Upload Extension
 
-1. In Xcode, go to **File → New → Target**
-2. Choose **Broadcast Upload Extension**
-3. Name it `BroadcastExtension`
-4. Set the bundle identifier to `com.yourcompany.yourapp.BroadcastExtension`
+1.  In Xcode, go to **File → New → Target**
+2.  Choose **Broadcast Upload Extension**
+3.  Name it `BroadcastExtension`
+4.  Set the bundle identifier to `com.yourcompany.yourapp.BroadcastExtension`
 
 ### 4. Configure Extension Files
 
-1. Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
-2. Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
-3. Update the following values in `SampleHandler.swift`:
-   - Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
-   - Replace `<SCHEME>` with your app's custom URL scheme
+1.  Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
+2.  Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
+3.  Update the following values in `SampleHandler.swift`:
+    -   Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
+    -   Replace `<SCHEME>` with your app's custom URL scheme
 
 ### 5. Configure Extension Settings
 
-1. Select the `BroadcastExtension` target in Xcode
-2. Go to **Signing & Capabilities**
-3. Add **App Groups** capability
-4. Select the same app group you created earlier
-5. Set the **Deployment Target** to match your main app
-6. Ensure **ReplayKit.framework** is linked in **Build Phases → Link Binary With Libraries**
+1.  Select the `BroadcastExtension` target in Xcode
+2.  Go to **Signing & Capabilities**
+3.  Add **App Groups** capability
+4.  Select the same app group you created earlier
+5.  Set the **Deployment Target** to match your main app
+6.  Ensure **ReplayKit.framework** is linked in **Build Phases → Link Binary With Libraries**
 
 ### 6. Update Extension Info.plist
 
@@ -236,7 +236,7 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
   Log.d("MainActivity", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
   
   try {
-    NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data)
+    NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
   } catch (e: Exception) {
     Log.e("MainActivity", "Error handling activity result: ${e.message}")
     e.printStackTrace()
@@ -246,20 +246,20 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
 
 ## Important Notes
 
-- Replace `group.com.yourcompany.yourapp.screenrecording` with your actual app group identifier
-- Replace `com.yourcompany.yourapp` with your actual bundle identifier
-- Ensure both your main app and broadcast extension have the same App Group configured
-- Test thoroughly on physical devices as screen recording doesn't work in simulators
-- Make sure your app has a custom URL scheme configured for deep linking
+-   Replace `group.com.yourcompany.yourapp.screenrecording` with your actual app group identifier
+-   Replace `com.yourcompany.yourapp` with your actual bundle identifier
+-   Ensure both your main app and broadcast extension have the same App Group configured
+-   Test thoroughly on physical devices as screen recording doesn't work in simulators
+-   Make sure your app has a custom URL scheme configured for deep linking
 
 ## Verification
 
 After completing these steps:
 
-1. Build and run your app on a physical device
-2. Test global screen recording functionality
-3. Verify that recorded files are properly saved and accessible
-4. Check that permissions are properly requested when needed
+1.  Build and run your app on a physical device
+2.  Test global screen recording functionality
+3.  Verify that recorded files are properly saved and accessible
+4.  Check that permissions are properly requested when needed
 
 Your bare React Native project should now have the same screen recording capabilities as an Expo project using the config plugin.
 
@@ -301,7 +301,13 @@ export default function ScreenRecorderExample() {
       }
     }
     
-    startGlobalRecording();
+    // Example usage with a dummy error callback
+    startGlobalRecording({
+      options: { enableMic: true },
+      onRecordingError: (error) => {
+        Alert.alert('Recording Error', `Failed to start recording: ${error.message}`);
+      }
+    });
   };
 
   return (
@@ -338,27 +344,27 @@ export default function ScreenRecorderExample() {
 
 ## Table of Contents
 
-- [React Hooks](#react-hooks)
-  - [`useCameraPermission()`](#usecamerapermission-permissionstate)
-  - [`useMicrophonePermission()`](#usemicrophonepermission-permissionstate)
-  - [`useGlobalRecording()`](#useglobalrecordinginput-globalrecordinghookoutput)
-- [Permissions](#permissions)
-  - [`getCameraPermissionStatus()`](#getcamerapermissionstatus-permissionstatus)
-  - [`getMicrophonePermissionStatus()`](#getmicrophonepermissionstatus-permissionstatus)
-  - [`requestCameraPermission()`](#requestcamerapermission-promisepermissionresponse)
-  - [`requestMicrophonePermission()`](#requestmicrophonepermission-promisepermissionresponse)
-- [In-App Recording](#in-app-recording)
-  - [`startInAppRecording()`](#startinapprecordinginput-promisevoid)
-  - [`stopInAppRecording()`](#stopinapprecording-void)
-  - [`cancelInAppRecording()`](#cancelinapprecording-void)
-- [Global Recording](#global-recording)
-  - [`startGlobalRecording()`](#startglobalrecording-void)
-  - [`stopGlobalRecording()`](#stopglobalrecording-void)
-  - [`getLastGlobalRecording()`](#getlastglobalrecording-screenrecordingfile--undefined)
-- [Event Listeners](#event-listeners)
-  - [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener--void)
-- [Utilities](#utilities)
-  - [`clearCache()`](#clearcache-void)
+-   [React Hooks](#react-hooks)
+    -   [`useCameraPermission()`](#usecamerapermission-permissionstate)
+    -   [`useMicrophonePermission()`](#usemicrophonepermission-permissionstate)
+    -   [`useGlobalRecording()`](#useglobalrecordinginput-globalrecordinghookoutput)
+-   [Permissions](#permissions)
+    -   [`getCameraPermissionStatus()`](#getcamerapermissionstatus-permissionstatus)
+    -   [`getMicrophonePermissionStatus()`](#getmicrophonepermissionstatus-permissionstatus)
+    -   [`requestCameraPermission()`](#requestcamerapermission-promisepermissionresponse)
+    -   [`requestMicrophonePermission()`](#requestmicrophonepermission-promisepermissionresponse)
+-   [In-App Recording](#in-app-recording)
+    -   [`startInAppRecording()`](#startinapprecordinginput-promisevoid)
+    -   [`stopInAppRecording()`](#stopinapprecording-void)
+    -   [`cancelInAppRecording()`](#cancelinapprecording-void)
+-   [Global Recording](#global-recording)
+    -   [`startGlobalRecording()`](#startglobalrecordinginput-void)
+    -   [`stopGlobalRecording()`](#stopglobalrecording-void)
+    -   [`getLastGlobalRecording()`](#getlastglobalrecording-screenrecordingfile--undefined)
+-   [Event Listeners](#event-listeners)
+    -   [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener--void)
+-   [Utilities](#utilities)
+    -   [`clearCache()`](#clearcache-void)
 
 ## React Hooks
 
@@ -413,7 +419,7 @@ Subscribe to global recording lifecycle and expose the most recent finished file
 **Platform:** iOS, Android
 
 **Parameters:**
-- `input.refetchOnAppForeground`: Refresh when app becomes active (useful if users stop recording while app is backgrounded)
+-   `input.refetchOnAppForeground`: Refresh when app becomes active (useful if users stop recording while app is backgrounded)
 
 **Returns:** Object with recording file, loading state, error state, and refetch function
 
@@ -532,7 +538,7 @@ Starts in-app screen recording with the specified configuration. Records only th
 **Platform:** iOS only
 
 **Parameters:**
-- `input`: Configuration object containing recording options and callbacks
+-   `input`: Configuration object containing recording options and callbacks
 
 **Example:**
 ```typescript
@@ -579,17 +585,31 @@ cancelInAppRecording(); // Recording discarded, no file saved
 
 ## Global Recording
 
-### `startGlobalRecording(): void`
+### `startGlobalRecording(input): void`
 
-Starts global screen recording that captures the entire device screen. Records system-wide content, including other apps and system UI. Requires screen recording permission on iOS.
+Starts global screen recording that captures the entire device screen. Records system-wide content, including other apps and system UI.
 
 **Platform:** iOS, Android
+
+**Parameters:**
+-   `input`: `GlobalRecordingInput` object with options and callbacks.
+
+**Throws:**
+-   `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
 
 **Example:**
 ```typescript
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-startGlobalRecording();
+startGlobalRecording({
+  options: {
+    enableMic: true // Or false, based on your preference
+  },
+  onRecordingError: (error) => {
+    console.error('Global recording error:', error.message);
+    // Handle the error (e.g., show an alert to the user)
+  }
+});
 // User can now navigate to other apps while recording continues
 ```
 
@@ -597,9 +617,9 @@ startGlobalRecording();
 
 Stops the current global screen recording and saves the video. The recorded file can be retrieved using `getLastGlobalRecording()`.
 
-**Note:** On iOS, a broadcast is ended by tapping the red broadcasting dot in the corner of the screen. On Android, it's handled via button.
+**Note:** On iOS, global recordings are primarily stopped by the user interacting with the system's red status bar indicator (or control center). This function provides a programmatic stop for Android.
 
-**Platform:** Android only (iOS stops via system UI)
+**Platform:** Android, iOS (programmatic stop is effective on Android, but iOS primarily relies on system UI interaction for stopping global recordings initiated by `RPSystemBroadcastPickerView`).
 
 **Example:**
 ```typescript
@@ -640,7 +660,7 @@ Adds a listener for screen recording events (start, stop, error, etc.). Returns 
 **Platform:** iOS, Android
 
 **Parameters:**
-- `listener`: Callback function that receives screen recording events
+-   `listener`: Callback function that receives screen recording events
 
 **Returns:** Cleanup function to remove the listener
 
@@ -735,6 +755,22 @@ export type InAppRecordingInput = {
   onRecordingFinished: (file: ScreenRecordingFile) => void;
 };
 
+// Global recording input options
+export type GlobalRecordingInputOptions = {
+  /** Whether to record microphone audio */
+  enableMic: boolean;
+};
+
+/**
+ * Configuration for global recording sessions.
+ */
+export type GlobalRecordingInput = {
+  options?: GlobalRecordingInputOptions;
+  /** Callback invoked when global recording encounters an error during start or execution. */
+  onRecordingError: (error: RecordingError) => void;
+};
+
+
 // Recording file information
 export interface ScreenRecordingFile {
   path: string;
@@ -759,16 +795,16 @@ export interface RecordingError {
 ## Platform Differences
 
 ### iOS
-- **In-App Recording**: Full support with camera overlay
-- **Global Recording**: Requires user interaction to stop (red status bar indicator)
-- **Permissions**: Camera and microphone permissions handled automatically
-- **App Extensions**: Uses broadcast extensions for global recording
+-   **In-App Recording**: Full support with camera overlay
+-   **Global Recording**: Requires user interaction to stop (red status bar indicator)
+-   **Permissions**: Camera and microphone permissions handled automatically
+-   **App Extensions**: Uses broadcast extensions for global recording
 
 ### Android
-- **In-App Recording**: Not supported (use global recording instead)
-- **Global Recording**: Full programmatic control including stop functionality
-- **Permissions**: Microphone permission required for audio recording
-- **Media Projection**: Uses Android's MediaProjection API
+-   **In-App Recording**: Not supported (use global recording instead)
+-   **Global Recording**: Full programmatic control including stop functionality
+-   **Permissions**: Microphone permission required for audio recording
+-   **Media Projection**: Uses Android's MediaProjection API
 
 ## Contributing
 
