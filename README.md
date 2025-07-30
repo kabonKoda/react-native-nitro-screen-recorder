@@ -402,8 +402,7 @@ Returns whether the user has granted permission to use the Microphone, or not. I
 ```tsx
 import { useMicrophonePermission } from 'react-native-nitro-screen-recorder';
 
-const { hasPermission, requestPermission } = useMicrophonePermission();
-const canRecordAudio = hasPermission;
+const { hasPermission: canRecordAudio, requestPermission } = useMicrophonePermission();
 
 // Use in recording configuration
 const recordingOptions = {
