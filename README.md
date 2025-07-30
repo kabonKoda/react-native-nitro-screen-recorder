@@ -1,6 +1,6 @@
-# react-native-nitro-screen-recorder
+![React Native Nitro Screen Recorder](./banner.jpg)
 
-![React Native Screen Recorder](./banner.png)
+# react-native-nitro-screen-recorder
 
 > ⚠️ This package is currently in alpha and under active development. Please report any issues that you run across on either platform.
 
@@ -46,7 +46,7 @@ yarn add react-native-nitro-screen-recorder react-native-nitro-modules
 
 This library includes an Expo config plugin for automatic native configuration.
 
-### Expo Config Plugin
+### Using Expo
 
 Add the plugin to your `app.config.js` or `app.json`:
 
@@ -81,6 +81,187 @@ export default {
 | `disableExperimental` | `boolean` | iOS | `false` | Whether to disable the experimental Expo appExtensions configuration. When true, skips applying the broadcast extension configuration |
 | `iosAppGroupIdentifier` | `string` | iOS | `"group.${PRODUCT_BUNDLE_IDENTIFIER}.screenrecording"` | App Group identifier used to share data between the main app and its extensions |
 | `showPluginLogs` | `boolean` | iOS, Android | `false` | Whether to display detailed plugin logs during the build process |
+
+# Using Bare Workflow (Non-Expo)
+
+If you're using a bare React Native project (not using Expo), you'll need to manually configure the native iOS and Android projects.
+
+## iOS Setup
+
+### 1. Add Permissions to Info.plist
+
+Add the following permissions to your `ios/YourApp/Info.plist`:
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio</string>
+```
+
+### 2. Create App Group
+
+1. Open your project in Xcode
+2. Select your main app target
+3. Go to **Signing & Capabilities**
+4. Click **+ Capability** and add **App Groups**
+5. Create a new app group with identifier: `group.com.yourcompany.yourapp.screenrecording`
+6. Add the App Group identifier to your `Info.plist`:
+
+```xml
+<key>AppGroupIdentifier</key>
+<string>group.com.yourcompany.yourapp.screenrecording</string>
+```
+
+### 3. Create Broadcast Upload Extension
+
+1. In Xcode, go to **File → New → Target**
+2. Choose **Broadcast Upload Extension**
+3. Name it `BroadcastExtension`
+4. Set the bundle identifier to `com.yourcompany.yourapp.BroadcastExtension`
+
+### 4. Configure Extension Files
+
+1. Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
+2. Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
+3. Update the following values in `SampleHandler.swift`:
+   - Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
+   - Replace `<SCHEME>` with your app's custom URL scheme
+
+### 5. Configure Extension Settings
+
+1. Select the `BroadcastExtension` target in Xcode
+2. Go to **Signing & Capabilities**
+3. Add **App Groups** capability
+4. Select the same app group you created earlier
+5. Set the **Deployment Target** to match your main app
+6. Ensure **ReplayKit.framework** is linked in **Build Phases → Link Binary With Libraries**
+
+### 6. Update Extension Info.plist
+
+Update `BroadcastExtension/Info.plist`:
+
+```xml
+<key>NSExtension</key>
+<dict>
+  <key>NSExtensionPointIdentifier</key>
+  <string>com.apple.broadcast-services-upload</string>
+  <key>NSExtensionPrincipalClass</key>
+  <string>$(PRODUCT_MODULE_NAME).SampleHandler</string>
+  <key>RPBroadcastProcessMode</key>
+  <string>RPBroadcastProcessModeSampleBuffer</string>
+</dict>
+<key>AppGroupIdentifier</key>
+<string>group.com.yourcompany.yourapp.screenrecording</string>
+```
+
+### 7. Create Extension Entitlements
+
+Create `BroadcastExtension/BroadcastExtension.entitlements`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.application-groups</key>
+  <array>
+    <string>group.com.yourcompany.yourapp.screenrecording</string>
+  </array>
+</dict>
+</plist>
+```
+
+Then in your extension target's **Build Settings**, set **Code Signing Entitlements** to `BroadcastExtension/BroadcastExtension.entitlements`.
+
+## Android Setup
+
+### 1. Add Permissions to AndroidManifest.xml
+
+Add the following permissions to `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+```
+
+### 2. Add Service Declaration
+
+Add the screen recording service to your `AndroidManifest.xml` inside the `<application>` tag:
+
+```xml
+<service
+    android:name="com.margelo.nitro.nitroscreenrecorder.ScreenRecordingService"
+    android:enabled="true"
+    android:exported="false"
+    android:foregroundServiceType="mediaProjection" />
+```
+
+### 3. Update MainActivity
+
+Add activity result handling to your `MainActivity.java` or `MainActivity.kt`:
+
+#### For Java (MainActivity.java):
+
+```java
+import android.content.Intent;
+import com.margelo.nitro.nitroscreenrecorder.NitroScreenRecorder;
+import android.util.Log;
+
+@Override
+public void onActivityResult(int requestCode, int resultCode, Intent data) {
+  super.onActivityResult(requestCode, resultCode, data);
+  Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+  
+  try {
+    NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
+  } catch (Exception e) {
+    Log.e("MainActivity", "Error handling activity result: " + e.getMessage());
+    e.printStackTrace();
+  }
+}
+```
+
+#### For Kotlin (MainActivity.kt):
+
+```kotlin
+import com.margelo.nitro.nitroscreenrecorder.NitroScreenRecorder
+import android.content.Intent
+import android.util.Log
+
+override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+  super.onActivityResult(requestCode, resultCode, data)
+  Log.d("MainActivity", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
+  
+  try {
+    NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data)
+  } catch (e: Exception) {
+    Log.e("MainActivity", "Error handling activity result: ${e.message}")
+    e.printStackTrace()
+  }
+}
+```
+
+## Important Notes
+
+- Replace `group.com.yourcompany.yourapp.screenrecording` with your actual app group identifier
+- Replace `com.yourcompany.yourapp` with your actual bundle identifier
+- Ensure both your main app and broadcast extension have the same App Group configured
+- Test thoroughly on physical devices as screen recording doesn't work in simulators
+- Make sure your app has a custom URL scheme configured for deep linking
+
+## Verification
+
+After completing these steps:
+
+1. Build and run your app on a physical device
+2. Test global screen recording functionality
+3. Verify that recorded files are properly saved and accessible
+4. Check that permissions are properly requested when needed
+
+Your bare React Native project should now have the same screen recording capabilities as an Expo project using the config plugin.
 
 ### Quick Start Example
 
