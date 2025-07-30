@@ -19,15 +19,14 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Demo
 
-### iOS In-App Recording
-![IOS_In-App (With Camera)](./ios_inapp.jpg)
-
-### iOS Global Recording
-![IOS_Global](./ios_global.jpg)
-
-### Android Global Recording  
-![Android_Global](./android_global.jpg)
-
+<p align="center">
+  <h3>iOS In-App Recording</h3>
+  <img src="./ios_inapp.jpg" width="30%" alt="IOS_In-App (With Camera)">
+  <h3>iOS Global Recording</h3>
+  <img src="./ios_global.jpg" width="30%" alt="IOS_Global">
+  <h3>Android Global Recording</h3>
+  <img src="./android_global.jpg" width="30%" alt="Android_Global">
+</p>
 
 ## Installation
 
