@@ -19,14 +19,11 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Demo
 
-<p align="center">
-  <h3>iOS In-App Recording</h3>
-  <img src="./ios_inapp.jpg" width="30%" alt="IOS_In-App (With Camera)">
-  <h3>iOS Global Recording</h3>
-  <img src="./ios_global.jpg" width="30%" alt="IOS_Global">
-  <h3>Android Global Recording</h3>
-  <img src="./android_global.jpg" width="30%" alt="Android_Global">
-</p>
+<div align="center">
+  <img src="./ios_inapp.jpg" width="30%" alt="IOS_In-App (With Camera)" style="display: inline-block; margin: 0 1%;">
+  <img src="./ios_global.jpg" width="30%" alt="IOS_Global" style="display: inline-block; margin: 0 1%;">
+  <img src="./android_global.jpg" width="30%" alt="Android_Global" style="display: inline-block; margin: 0 1%;">
+</div>
 
 ## Installation
 
@@ -46,7 +43,8 @@ yarn add react-native-nitro-screen-recorder react-native-nitro-modules
 
 This library includes an Expo config plugin for automatic native configuration.
 
-### Using Expo
+<details>
+<summary><h3>Using Expo</h3></summary>
 
 Add the plugin to your `app.config.js` or `app.json`:
 
@@ -82,7 +80,10 @@ export default {
 | `iosAppGroupIdentifier` | `string` | iOS | `"group.${PRODUCT_BUNDLE_IDENTIFIER}.screenrecording"` | App Group identifier used to share data between the main app and its extensions |
 | `showPluginLogs` | `boolean` | iOS, Android | `false` | Whether to display detailed plugin logs during the build process |
 
-# Using Bare Workflow (Non-Expo)
+</details>
+
+<details>
+<summary><h3>Using Bare Workflow (Non-Expo)</h3></summary>
 
 If you're using a bare React Native project (not using Expo), you'll need to manually configure the native iOS and Android projects.
 
@@ -243,6 +244,8 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
   }
 }
 ```
+
+</details>
 
 ## Important Notes
 
