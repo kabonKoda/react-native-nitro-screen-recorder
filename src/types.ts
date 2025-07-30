@@ -108,7 +108,7 @@ export type CameraDevice = 'front' | 'back';
  * };
  * ```
  */
-export type RecordingOptions =
+export type InAppRecordingOptions =
   | {
       /** Whether to record microphone audio */
       enableMic: boolean;
@@ -146,9 +146,33 @@ export type RecordingOptions =
  */
 export type InAppRecordingInput = {
   /** Recording configuration options */
-  options: RecordingOptions;
+  options: InAppRecordingOptions;
   /** Callback invoked when recording completes successfully */
   onRecordingFinished: (file: ScreenRecordingFile) => void;
+};
+
+export type GlobalRecordingInputOptions = {
+  /** Whether to record microphone audio */
+  enableMic: boolean;
+};
+
+/**
+ * Configuration for global recording sessions.
+ * Currently used for error handling callbacks.
+ *
+ * @example
+ * ```typescript
+ * const globalInput: GlobalRecordingInput = {
+ *   onRecordingError: (error) => {
+ *     console.error('Recording failed:', error.message);
+ *   }
+ * };
+ * ```
+ */
+export type GlobalRecordingInput = {
+  options?: GlobalRecordingInputOptions;
+  /** Callback invoked when recording encounters an error */
+  onRecordingError: (error: RecordingError) => void;
 };
 
 /**

@@ -6,6 +6,7 @@ import type {
   ScreenRecordingFile,
   ScreenRecordingEvent,
   PermissionStatus,
+  RecordingError,
 } from './types';
 
 /**
@@ -57,7 +58,10 @@ export interface NitroScreenRecorder
   // GLOBAL RECORDING
   // ============================================================================
 
-  startGlobalRecording(): void;
+  startGlobalRecording(
+    enableMic: boolean,
+    onRecordingError: (error: RecordingError) => void
+  ): void;
   stopGlobalRecording(): void;
   getLastGlobalRecording(): ScreenRecordingFile | undefined;
 

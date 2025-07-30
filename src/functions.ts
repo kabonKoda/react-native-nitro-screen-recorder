@@ -6,6 +6,7 @@ import {
   InAppRecordingInput,
   ScreenRecordingEvent,
   PermissionStatus,
+  GlobalRecordingInput,
 } from './types';
 import { Platform } from 'react-native';
 
@@ -121,6 +122,17 @@ export async function startInAppRecording(
     console.warn('`startInAppRecording` is only supported on iOS.');
     return;
   }
+
+  if (
+    input.options.enableMic &&
+    getMicrophonePermissionStatus() !== 'granted'
+  ) {
+    throw new Error('Microphone permission not granted.');
+  }
+
+  if (input.options.enableCamera && getCameraPermissionStatus() !== 'granted') {
+    throw new Error('Camera permission not granted.');
+  }
   // Handle camera options based on enableCamera flag
   if (input.options.enableCamera) {
     return NitroScreenRecorderHybridObject.startInAppRecording(
@@ -195,8 +207,20 @@ export function cancelInAppRecording(): void {
  * // User can now navigate to other apps while recording continues
  * ```
  */
-export function startGlobalRecording(): void {
-  return NitroScreenRecorderHybridObject.startGlobalRecording();
+export function startGlobalRecording(input: GlobalRecordingInput): void {
+  // On IOS, the user grants microphone permission via a picker toggle
+  // button, so we don't need this check first
+  if (
+    input.options?.enableMic &&
+    isAndroid &&
+    getMicrophonePermissionStatus() !== 'granted'
+  ) {
+    throw new Error('Microphone permission not granted.');
+  }
+  return NitroScreenRecorderHybridObject.startGlobalRecording(
+    input?.options?.enableMic ?? false,
+    input?.onRecordingError
+  );
 }
 
 /**

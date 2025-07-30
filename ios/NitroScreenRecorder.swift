@@ -87,12 +87,12 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   // MARK: - Permission Methods
   public func getCameraPermissionStatus() throws -> PermissionStatus {
-      let status = AVCaptureDevice.authorizationStatus(for: .video)
-      return self.mapAVAuthorizationStatusToPermissionResponse(status).status
+    let status = AVCaptureDevice.authorizationStatus(for: .video)
+    return self.mapAVAuthorizationStatusToPermissionResponse(status).status
   }
 
   public func getMicrophonePermissionStatus() throws -> PermissionStatus {
-      let status = AVCaptureDevice.authorizationStatus(for: .audio)
+    let status = AVCaptureDevice.authorizationStatus(for: .audio)
     return self.mapAVAuthorizationStatusToPermissionResponse(status).status
   }
 
@@ -246,11 +246,11 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     safelyClearInAppRecordingFiles()
     print("🛑 In‑app recording canceled and buffers cleared")
   }
-  
-/**
- Attaches a micro PickerView button off-screen screen and presses that button to open the broadcast.
- */
-func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
+
+  /**
+   Attaches a micro PickerView button off-screen screen and presses that button to open the broadcast.
+   */
+  func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
@@ -264,10 +264,12 @@ func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
 
       if let bundleID = bundleID {
         broadcastPicker.preferredExtension = bundleID
+      } else {
+        print("⚠️ No broadcast extension bundle ID found - user will see all available extensions")
       }
 
       // Show microphone button - user can choose to enable/disable mic in the system picker
-      broadcastPicker.showsMicrophoneButton = true
+      broadcastPicker.showsMicrophoneButton = enableMicrophone
 
       guard
         let window = UIApplication.shared
@@ -278,6 +280,7 @@ func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
           .first(where: { $0.isKeyWindow })
       else {
         print("❌ Could not find key window")
+        // Could potentially call error callback here if we stored it
         return
       }
 
@@ -291,6 +294,7 @@ func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
         button.sendActions(for: .touchUpInside)
       } else {
         print("❌ No button found in broadcast picker")
+        // Could potentially call error callback here if we stored it
       }
 
       // Clean up the picker after a delay
@@ -298,12 +302,38 @@ func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
         print("🧹 Cleaning up broadcast picker")
         broadcastPicker.removeFromSuperview()
       }
-
     }
   }
-  
-  func startGlobalRecording() throws {
-    presentGlobalBroadcastModal()
+
+  func startGlobalRecording(enableMic: Bool, onRecordingError: @escaping (RecordingError) -> Void)
+    throws
+  {
+    // Validate that we can access the app group (needed for global recordings)
+    guard let appGroupId = try? getAppGroupIdentifier() else {
+      let error = RecordingError(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message: "Could not access app group identifier required for global recording. Something is wrong with your entitlements."
+      )
+      onRecordingError(error)
+      return
+    }
+
+    guard
+      FileManager.default
+        .containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
+    else {
+      let error = RecordingError(
+        name: "APP_GROUP_CONTAINER_FAILED",
+        message: "Could not access app group container required for global recording. Something is wrong with your entitlements."
+      )
+      onRecordingError(error)
+      return
+    }
+
+    // Present the broadcast picker
+    presentGlobalBroadcastModal(enableMicrophone: enableMic)
+
+
   }
 
   func stopGlobalRecording() throws {

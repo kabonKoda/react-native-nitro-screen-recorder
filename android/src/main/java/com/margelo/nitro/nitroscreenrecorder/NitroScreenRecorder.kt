@@ -23,8 +23,6 @@ import kotlin.coroutines.resume
 
 data class Listener<T>(val id: Double, val callback: T)
 
-data class RecordingError(val name: String, val message: String)
-
 @DoNotStrip
 class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
 
@@ -279,12 +277,15 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
 
   // --- Global Recording Methods ---
 
-  override fun startGlobalRecording() {
+  override fun startGlobalRecording(enableMic: Boolean, onRecordingError: (RecordingError) -> Unit) {
     if (globalRecordingService?.isCurrentlyRecording() == true) {
       Log.w(TAG, "⚠️ Global recording already in progress")
       return
     }
     val ctx = NitroModules.applicationContext ?: throw Error("NO_CONTEXT")
+
+    // Store the error callback so it can be used by the service
+    globalRecordingErrorCallback = onRecordingError
 
     requestGlobalRecordingPermission().then { (resultCode, resultData) ->
       if (!isServiceBound) {
@@ -296,7 +297,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         action = ScreenRecordingService.ACTION_START_RECORDING
         putExtra(ScreenRecordingService.EXTRA_RESULT_CODE, resultCode)
         putExtra(ScreenRecordingService.EXTRA_RESULT_DATA, resultData)
-        putExtra(ScreenRecordingService.EXTRA_ENABLE_MIC, true)
+        putExtra(ScreenRecordingService.EXTRA_ENABLE_MIC, enableMic) // Use the parameter instead of hardcoded true
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -309,7 +310,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         name = "GlobalRecordingStartError",
         message = error.message ?: "Failed to start global recording"
       )
-      globalRecordingErrorCallback?.invoke(recordingError)
+      onRecordingError(recordingError) // Use the callback parameter directly
     }
   }
 
@@ -347,9 +348,5 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     val globalDir = File(ctx.getExternalFilesDir(null), "recordings")
     RecorderUtils.clearDirectory(globalDir)
     lastGlobalRecording = null
-  }
-
-  fun setGlobalRecordingErrorCallback(callback: (RecordingError) -> Unit) {
-    globalRecordingErrorCallback = callback
   }
 }

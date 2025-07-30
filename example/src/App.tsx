@@ -1,4 +1,11 @@
-import { View, StyleSheet, Button, Text, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Button,
+  Text,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import * as ScreenRecorder from 'react-native-nitro-screen-recorder';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
@@ -45,7 +52,7 @@ export default function App() {
   };
 
   // Recording Options
-  const options: ScreenRecorder.RecordingOptions = {
+  const options: ScreenRecorder.InAppRecordingOptions = {
     enableMic: true,
     enableCamera: true,
     cameraPreviewStyle: {
@@ -55,7 +62,7 @@ export default function App() {
       left: 20,
       borderRadius: 10,
     },
-    cameraDevice: 'front',
+    cameraDevice: 'back',
   };
 
   // In-App Recording Functions
@@ -87,7 +94,14 @@ export default function App() {
 
   // Global Recording Functions
   const handleStartGlobalRecording = () => {
-    ScreenRecorder.startGlobalRecording();
+    ScreenRecorder.startGlobalRecording({
+      options: {
+        enableMic: false,
+      },
+      onRecordingError: (error) => {
+        console.log('Global recording error', error);
+      },
+    });
   };
 
   const handleStopGlobalRecording = () => {
@@ -110,24 +124,27 @@ export default function App() {
       {/* Permissions Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Permissions</Text>
-
-        <Text style={styles.permissionLabel}>Camera</Text>
-        <View style={styles.buttonRow}>
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Check Camera"
-              onPress={getCameraPermissionStatus}
-              color="#007AFF"
-            />
-          </View>
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Request Camera"
-              onPress={requestCameraPermission}
-              color="#007AFF"
-            />
-          </View>
-        </View>
+        {Platform.OS === 'ios' && (
+          <>
+            <Text style={styles.permissionLabel}>Camera</Text>
+            <View style={styles.buttonRow}>
+              <View style={styles.buttonContainer}>
+                <Button
+                  title="Check Camera"
+                  onPress={getCameraPermissionStatus}
+                  color="#007AFF"
+                />
+              </View>
+              <View style={styles.buttonContainer}>
+                <Button
+                  title="Request Camera"
+                  onPress={requestCameraPermission}
+                  color="#007AFF"
+                />
+              </View>
+            </View>
+          </>
+        )}
 
         <Text style={styles.permissionLabel}>Microphone</Text>
         <View style={styles.buttonRow}>

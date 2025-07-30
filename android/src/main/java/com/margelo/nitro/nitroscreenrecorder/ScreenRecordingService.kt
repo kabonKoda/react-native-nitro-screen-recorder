@@ -31,6 +31,15 @@ class ScreenRecordingService : Service() {
 
   private val binder = LocalBinder()
 
+  private val mediaProjectionCallback = object : MediaProjection.Callback() {
+    override fun onStop() {
+      Log.d(TAG, "📱 MediaProjection stopped")
+      if (isRecording) {
+        stopRecording()
+      }
+    }
+  }
+
   companion object {
     private const val TAG = "ScreenRecordingService"
     private const val NOTIFICATION_ID = 1001
@@ -151,6 +160,9 @@ class ScreenRecordingService : Service() {
       mediaProjection =
         mediaProjectionManager.getMediaProjection(resultCode, resultData)
 
+      // Register the callback BEFORE creating VirtualDisplay
+      mediaProjection?.registerCallback(mediaProjectionCallback, null)
+
       val recordingsDir = File(getExternalFilesDir(null), "recordings")
       currentRecordingFile =
         RecorderUtils.createOutputFile(recordingsDir, "global_recording")
@@ -253,8 +265,12 @@ class ScreenRecordingService : Service() {
       virtualDisplay = null
       mediaRecorder?.release()
       mediaRecorder = null
+
+      // Unregister callback before stopping MediaProjection
+      mediaProjection?.unregisterCallback(mediaProjectionCallback)
       mediaProjection?.stop()
       mediaProjection = null
+
       Log.d(TAG, "✅ Cleanup completed")
     } catch (e: Exception) {
       Log.e(TAG, "❌ Error during cleanup: ${e.message}")

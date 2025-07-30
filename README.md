@@ -20,13 +20,14 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 ## Demo
 
 ### iOS In-App Recording
-*Demo video will be placed here*
+![IOS_In-App (With Camera)](./ios_inapp.jpg)
+
+### iOS Global Recording
+![IOS_Global](./ios_global.jpg)
 
 ### Android Global Recording  
-*Demo video will be placed here*
+![Android_Global](./android_global.jpg)
 
-### Camera Overlay Features
-*Demo video will be placed here*
 
 ## Installation
 
