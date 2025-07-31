@@ -186,13 +186,16 @@ function addKotlinScreenRecordingSupport(content: string, l: any): string {
       Log.e("MainActivity", "Error handling activity result: \${e.message}")
       e.printStackTrace()
     }`;
-        content = content.replace(
-          onActivityResultRegex,
-          match[1] + match[2] + screenRecordingHandler
-        );
-        l.info(
-          '✅ Added screen recording handler to existing onActivityResult method'
-        );
+        if (match?.[1] && match?.[2]) {
+          content = content.replace(
+            onActivityResultRegex,
+            match[1] + match[2] + screenRecordingHandler
+          );
+
+          l.info(
+            '✅ Added screen recording handler to existing onActivityResult method'
+          );
+        }
       }
     } else {
       l.info(
@@ -272,13 +275,16 @@ function addJavaScreenRecordingSupport(content: string, l: any): string {
       Log.e("MainActivity", "Error handling activity result: " + e.getMessage());
       e.printStackTrace();
     }`;
-        content = content.replace(
-          onActivityResultRegex,
-          match[1] + match[2] + screenRecordingHandler
-        );
-        l.info(
-          '✅ Added screen recording handler to existing onActivityResult method'
-        );
+        if (match?.[1] && match?.[2]) {
+          content = content.replace(
+            onActivityResultRegex,
+            match[1] + match[2] + screenRecordingHandler
+          );
+
+          l.info(
+            '✅ Added screen recording handler to existing onActivityResult method'
+          );
+        }
       }
     } else {
       l.info(
