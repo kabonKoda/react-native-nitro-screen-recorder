@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "./src",
+    "outDir": "./lib/typescript",
     "paths": {
       "react-native-nitro-screen-recorder": ["./src/index"]
     },
@@ -16,7 +17,7 @@
     "module": "esnext",
     "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
-    "noEmit": true,
+    "noEmit": false,
     "noImplicitReturns": true,
     "noImplicitUseStrict": false,
     "noStrictGenericChecks": false,
@@ -25,6 +26,10 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "esnext"
+    "target": "esnext",
+    "declaration": true,
+    "emitDeclarationOnly": true
   },
+  "include": ["src"],
+  "exclude": ["node_modules", "lib", "example"]
 }

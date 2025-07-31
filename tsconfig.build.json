@@ -1,5 +1,10 @@
 {
-  "extends": "./tsconfig",
-  "include": ["src/**/*"],
-  "exclude": ["example", "lib", "src/expo-plugin", "**/__tests__", "**/__fixtures__", "**/__mocks__"]
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./lib/typescript",
+    "rootDir": "./src",
+  },
+  "include": ["src"]
 }

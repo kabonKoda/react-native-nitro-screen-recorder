@@ -17,7 +17,7 @@
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-nitro-modules": "^0.27.1",
-    "react-native-nitro-screen-recorder": "workspace:*"
+    "react-native-nitro-screen-recorder": "*"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

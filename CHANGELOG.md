@@ -1,9 +1,12 @@
 # Changelog
+## [0.1.6] - 2025-07-31
+### Fix
+- Attempt #6: Fix build error with expo config plugin
+
 ## [0.1.5] - 2025-07-31
 ### Fix
 - Attempt #5: Fix build error with expo config plugin
 
-# Changelog
 ## [0.1.4] - 2025-07-31
 ### Fix
 - Attempt #4: Fix build error with expo config plugin
