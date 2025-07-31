@@ -7,6 +7,9 @@
   "types": "lib/typescript/src/index.d.ts",
   "react-native": "src/index",
   "source": "src/index",
+  "expo": {
+    "plugin": "./app.plugin.js"
+  },
   "files": [
     "src",
     "lib",
@@ -88,7 +91,7 @@
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-nitro-modules": "^0.26.3"
+    "react-native-nitro-modules": "^0.27.1"
   },
   "workspaces": [
     "example"
