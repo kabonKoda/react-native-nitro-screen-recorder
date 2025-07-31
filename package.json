@@ -1,6 +1,6 @@
 {
   "name": "react-native-nitro-screen-recorder",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
   "source": "./src/index.tsx",
   "main": "./lib/module/index.js",
@@ -23,7 +23,7 @@
     "*.podspec",
     "react-native.config.js",
     "app.plugin.js",
-    "src/expo-plugin/build", 
+    "src/expo-plugin/build",
     "!ios/build",
     "!android/build",
     "!android/gradle",
