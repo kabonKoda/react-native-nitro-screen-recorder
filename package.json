@@ -1,17 +1,17 @@
 {
   "name": "react-native-nitro-screen-recorder",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
   "source": "./src/index.tsx",
-  "main":   "./lib/commonjs/index.js",
-  "module": "./lib/module/index.js", 
+  "main": "./lib/commonjs/index.js",
+  "module": "./lib/module/index.js",
   "types": "./lib/typescript/module/index.d.ts",
   "exports": {
     ".": {
-      "types":   "./lib/typescript/module/index.d.ts",
+      "types": "./lib/typescript/module/index.d.ts",
       "default": "./lib/module/index.js",
       "require": {
-        "types":   "./lib/typescript/commonjs/index.d.ts",
+        "types": "./lib/typescript/commonjs/index.d.ts",
         "default": "./lib/commonjs/index.js"
       }
     },
@@ -38,7 +38,7 @@
     "*.podspec",
     "react-native.config.js",
     "app.plugin.js",
-    "src/expo-plugin/build", 
+    "src/expo-plugin/build",
     "!ios/build",
     "!android/build",
     "!android/gradle",
@@ -158,10 +158,31 @@
     "source": "src",
     "output": "lib",
     "targets": [
-        ["custom", { "script": "nitrogen", "clean": "nitrogen/" }],
-        ["typescript", { "project": "tsconfig.build.json" }],
-        ["module", { "esm": true }],
-        ["commonjs", { "esm": true }]
+      [
+        "custom",
+        {
+          "script": "nitrogen",
+          "clean": "nitrogen/"
+        }
+      ],
+      [
+        "typescript",
+        {
+          "project": "tsconfig.build.json"
+        }
+      ],
+      [
+        "module",
+        {
+          "esm": true
+        }
+      ],
+      [
+        "commonjs",
+        {
+          "esm": true
+        }
+      ]
     ]
   },
   "create-react-native-library": {
