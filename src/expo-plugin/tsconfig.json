@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig",
   "compilerOptions": {
-    "outDir": "../../lib/plugin",
+    "outDir": "./build",
     "rootDir": ".",
     "declaration": true,
     "module": "commonjs",
@@ -12,5 +12,5 @@
     "noEmit": false
   },
   "include": ["./**/*"],
-  "exclude": []
+  "exclude": ["./build"]
 }
