@@ -1,4 +1,7 @@
 # Changelog
+## [0.1.2] - 2025-07-31
+### Fix
+- Attempt #2: Typescript error in expo config plugin
 
 ## [0.1.1] - 2025-07-30
 ### Fix
