@@ -2,13 +2,15 @@
   "name": "react-native-nitro-screen-recorder",
   "version": "0.1.2",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
-  "main": "lib/commonjs/index",
-  "module": "lib/module/index",
-  "types": "lib/typescript/src/index.d.ts",
-  "react-native": "src/index",
-  "source": "src/index",
-  "expo": {
-    "plugin": "./app.plugin.js"
+  "source": "./src/index.tsx",
+  "main": "./lib/module/index.js",
+  "types": "./lib/typescript/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/typescript/src/index.d.ts",
+      "default": "./lib/module/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "src",
@@ -38,7 +40,8 @@
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build && cd example && npx expo prebuild --clean && cd ../",
+    "build-plugin": "tsc -p src/expo-plugin/tsconfig.json && cp -r src/expo-plugin/ios/*.swift lib/plugin/ios/",   
+    "prepare": "bob build && yarn build-plugin && cd example && npx expo prebuild --clean && cd ../",
     "nitrogen": "nitro-codegen",
     "release": "release-it --only-version"
   },
@@ -146,14 +149,18 @@
           "clean": "nitrogen/"
         }
       ],
-      "module",
+      [
+        "module",
+        {
+          "esm": true
+        }
+      ],
       [
         "typescript",
         {
-          "project": "tsconfig.json"
+          "project": "tsconfig.build.json"
         }
-      ],
-      "commonjs"
+      ]
     ]
   },
   "create-react-native-library": {

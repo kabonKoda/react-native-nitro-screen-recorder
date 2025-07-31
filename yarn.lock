@@ -11695,10 +11695,11 @@ __metadata:
     react-native-builder-bob: ^0.40.12
     react-native-monorepo-config: ^0.1.9
     react-native-nitro-modules: ^0.27.1
+    react-native-nitro-screen-recorder: "workspace:*"
   languageName: unknown
   linkType: soft
 
-"react-native-nitro-screen-recorder@workspace:.":
+"react-native-nitro-screen-recorder@workspace:*, react-native-nitro-screen-recorder@workspace:.":
   version: 0.0.0-use.local
   resolution: "react-native-nitro-screen-recorder@workspace:."
   dependencies:
@@ -11731,7 +11732,7 @@ __metadata:
   peerDependencies:
     react: "*"
     react-native: "*"
-    react-native-nitro-modules: ^0.26.3
+    react-native-nitro-modules: ^0.27.1
   languageName: unknown
   linkType: soft
 
