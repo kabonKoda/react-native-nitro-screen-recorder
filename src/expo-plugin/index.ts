@@ -8,7 +8,10 @@ import type { ConfigProps } from './@types';
 import { withBroadcastExtension } from './ios/withBroadcastExtension';
 import { withAndroidScreenRecording } from './android/withAndroidScreenRecording';
 
-const pkg: { name: string; version: string } = require('../../../package.json');
+const pkg = require('../../../package.json') as {
+  name: string;
+  version: string;
+};
 
 const CAMERA_USAGE = 'Allow $(PRODUCT_NAME) to access your camera';
 const MICROPHONE_USAGE = 'Allow $(PRODUCT_NAME) to access your microphone';
