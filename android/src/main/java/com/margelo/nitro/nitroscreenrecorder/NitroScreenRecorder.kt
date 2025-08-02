@@ -20,6 +20,7 @@ import com.margelo.nitro.nitroscreenrecorder.utils.RecorderUtils
 import java.io.File
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import kotlinx.coroutines.delay
 
 data class Listener<T>(val id: Double, val callback: T)
 
@@ -264,15 +265,22 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     cameraDevice: CameraDevice,
     onRecordingFinished: (ScreenRecordingFile) -> Unit
   ) {
-    Log.w(TAG, "startInAppRecording is not supported on Android. Use startGlobalRecording instead.")
+    // no-op
+    return
   }
 
-  override fun stopInAppRecording() {
-    Log.w(TAG, "stopInAppRecording is not supported on Android.")
+  override fun stopInAppRecording(): Promise<ScreenRecordingFile?> {
+    return Promise.async {
+      // no-op
+      return@async null
+    }
   }
 
-  override fun cancelInAppRecording() {
-    Log.w(TAG, "cancelInAppRecording is not supported on Android.")
+  override fun cancelInAppRecording(): Promise<Unit>  {
+    return Promise.async {
+      // no-op
+      return@async
+    }
   }
 
   // --- Global Recording Methods ---
@@ -314,15 +322,29 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     }
   }
 
-  override fun stopGlobalRecording() {
-    val ctx = NitroModules.applicationContext ?: return
-    val stopIntent = Intent(ctx, ScreenRecordingService::class.java).apply {
-      action = ScreenRecordingService.ACTION_STOP_RECORDING
-    }
-    ctx.startService(stopIntent)
-    if (isServiceBound) {
-      ctx.unbindService(serviceConnection)
-      isServiceBound = false
+  override fun stopGlobalRecording(): Promise<ScreenRecordingFile?> {
+    return Promise.async {
+      val ctx = NitroModules.applicationContext ?: return@async null
+
+      if (globalRecordingService?.isCurrentlyRecording() != true) {
+        Log.w(TAG, "No active recording to stop")
+        return@async null
+      }
+
+      val stopIntent = Intent(ctx, ScreenRecordingService::class.java).apply {
+        action = ScreenRecordingService.ACTION_STOP_RECORDING
+      }
+      ctx.startService(stopIntent)
+
+      if (isServiceBound) {
+        ctx.unbindService(serviceConnection)
+        isServiceBound = false
+      }
+
+      // Add 0.5 second delay to ensure recording is properly finalized
+      delay(500)
+
+      return@async retrieveLastGlobalRecording()
     }
   }
 
