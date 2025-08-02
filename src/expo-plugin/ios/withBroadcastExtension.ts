@@ -19,8 +19,8 @@ export const withBroadcastExtension: ConfigPlugin<ConfigProps> = (
   return withPlugins(config, [
     /** Main‑app tweaks */
     [withMainAppAppGroupInfoPlist, props],
-    [withMainAppAppGroupEntitlement, props],
     [withMainAppEntitlementsFile, props],
+    [withMainAppAppGroupEntitlement, props],
 
     /** Broadcast extension target */
     [withBroadcastExtensionFiles, props],

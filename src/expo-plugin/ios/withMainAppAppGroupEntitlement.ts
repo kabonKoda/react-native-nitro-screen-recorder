@@ -15,12 +15,9 @@ export const withMainAppAppGroupEntitlement: ConfigPlugin<ConfigProps> = (
     }
     const modResultsArray = newConfig.modResults[APP_GROUP_KEY] as Array<any>;
     const entitlement = getAppGroup(newConfig?.ios?.bundleIdentifier!);
-    console.log('hit with', entitlement);
     if (modResultsArray.indexOf(entitlement) !== -1) {
-      console.log('found');
       return newConfig;
     }
-    console.log('pushing');
     modResultsArray.push(entitlement);
     return newConfig;
   });
