@@ -10,7 +10,6 @@ import { withEasManagedCredentials } from './withEasManagedCredentials';
 
 // Typed props that bubble all the way down to the sub‑mods
 import type { ConfigProps } from '../@types';
-import { withMainAppEntitlementsFile } from './withMainAppEntitlementsFile';
 
 export const withBroadcastExtension: ConfigPlugin<ConfigProps> = (
   config,
@@ -19,7 +18,6 @@ export const withBroadcastExtension: ConfigPlugin<ConfigProps> = (
   return withPlugins(config, [
     /** Main‑app tweaks */
     [withMainAppAppGroupInfoPlist, props],
-    [withMainAppEntitlementsFile, props],
     [withMainAppAppGroupEntitlement, props],
 
     /** Broadcast extension target */
