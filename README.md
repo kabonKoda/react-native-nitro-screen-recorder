@@ -318,7 +318,7 @@ export default function ScreenRecorderExample() {
       </Text>
       
       <Button title="Start Global Recording" onPress={handleStartRecording} />
-      <Button title="Stop Recording" onPress={stopGlobalRecording} /> // Android Only
+      <Button title="Stop Recording" onPress={stopGlobalRecording} />
       
       {isLoading && <Text>Processing recording...</Text>}
       {isError && (
@@ -356,16 +356,17 @@ export default function ScreenRecorderExample() {
     -   [`requestMicrophonePermission()`](#requestmicrophonepermission-promisepermissionresponse)
 -   [In-App Recording](#in-app-recording)
     -   [`startInAppRecording()`](#startinapprecordinginput-promisevoid)
-    -   [`stopInAppRecording()`](#stopinapprecording-void)
-    -   [`cancelInAppRecording()`](#cancelinapprecording-void)
+    -   [`stopInAppRecording()`](#stopinapprecording-promisescreenrecordingfile--undefined)
+    -   [`cancelInAppRecording()`](#cancelinapprecording-promisevoid)
 -   [Global Recording](#global-recording)
     -   [`startGlobalRecording()`](#startglobalrecordinginput-void)
-    -   [`stopGlobalRecording()`](#stopglobalrecording-void)
-    -   [`getLastGlobalRecording()`](#getlastglobalrecording-screenrecordingfile--undefined)
+    -   [`stopGlobalRecording()`](#stopglobalrecording-promisescreenrecordingfile--undefined)
+    -   [`retrieveLastGlobalRecording()`](#retrievelastglobalrecording-screenrecordingfile--undefined)
 -   [Event Listeners](#event-listeners)
-    -   [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener--void)
+    -   [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener-number)
+    -   [`removeScreenRecordingListener()`](#removescreenrecordinglistenerid-void)
 -   [Utilities](#utilities)
-    -   [`clearCache()`](#clearcache-void)
+    -   [`clearRecordingCache()`](#clearrecordingcache-void)
 
 ## React Hooks
 
@@ -538,39 +539,46 @@ Starts in-app screen recording with the specified configuration. Records only th
 **Platform:** iOS only
 
 **Parameters:**
--   `input`: Configuration object containing recording options and callbacks
+-   `enableMic`: boolean - Whether to enable microphone audio
+-   `enableCamera`: boolean - Whether to enable camera overlay
+-   `cameraPreviewStyle`: RecorderCameraStyle - Camera positioning and styling
+-   `cameraDevice`: CameraDevice - Front or back camera
+-   `onRecordingFinished`: (file: ScreenRecordingFile) => void - Callback when recording completes
 
 **Example:**
 ```typescript
 import { startInAppRecording } from 'react-native-nitro-screen-recorder';
 
-await startInAppRecording({
-  options: {
-    enableMic: true,
-    enableCamera: true,
-    cameraDevice: 'front',
-    cameraPreviewStyle: { width: 100, height: 150, top: 30, left: 10 }
-  },
-  onRecordingFinished: (file) => {
+await startInAppRecording(
+  true, // enableMic
+  true, // enableCamera
+  { width: 100, height: 150, top: 30, left: 10 }, // cameraPreviewStyle
+  'front', // cameraDevice
+  (file) => {
     console.log('Recording saved:', file.path);
   }
-});
+);
 ```
 
-### `stopInAppRecording(): void`
+### `stopInAppRecording(): Promise<ScreenRecordingFile | undefined>`
 
-Stops the current in-app recording and saves the recorded video. The recording file will be provided through the onRecordingFinished callback.
+Stops the current in-app recording and returns the recorded video file. The recording file is also provided through the onRecordingFinished callback.
 
 **Platform:** iOS only
+
+**Returns:** Promise that resolves with the recording file or undefined if no recording was active
 
 **Example:**
 ```typescript
 import { stopInAppRecording } from 'react-native-nitro-screen-recorder';
 
-stopInAppRecording(); // File will be available in onRecordingFinished callback
+const file = await stopInAppRecording();
+if (file) {
+  console.log('Recording stopped and saved:', file.path);
+}
 ```
 
-### `cancelInAppRecording(): void`
+### `cancelInAppRecording(): Promise<void>`
 
 Cancels the current in-app recording without saving the video. No file will be generated and onRecordingFinished will not be called.
 
@@ -580,7 +588,7 @@ Cancels the current in-app recording without saving the video. No file will be g
 ```typescript
 import { cancelInAppRecording } from 'react-native-nitro-screen-recorder';
 
-cancelInAppRecording(); // Recording discarded, no file saved
+await cancelInAppRecording(); // Recording discarded, no file saved
 ```
 
 ## Global Recording
@@ -592,7 +600,8 @@ Starts global screen recording that captures the entire device screen. Records s
 **Platform:** iOS, Android
 
 **Parameters:**
--   `input`: `GlobalRecordingInput` object with options and callbacks.
+-   `enableMic`: boolean - Whether to enable microphone audio
+-   `onRecordingError`: (error: RecordingError) => void - Error callback
 
 **Throws:**
 -   `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
@@ -601,38 +610,35 @@ Starts global screen recording that captures the entire device screen. Records s
 ```typescript
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-startGlobalRecording({
-  options: {
-    enableMic: true // Or false, based on your preference
-  },
-  onRecordingError: (error) => {
+startGlobalRecording(
+  true, // enableMic
+  (error) => {
     console.error('Global recording error:', error.message);
     // Handle the error (e.g., show an alert to the user)
   }
-});
+);
 // User can now navigate to other apps while recording continues
 ```
 
-### `stopGlobalRecording(): void`
+### `stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>`
 
-Stops the current global screen recording and saves the video. The recorded file can be retrieved using `getLastGlobalRecording()`. Recommend using the `useGlobalRecording()` hook for managing getting the files.
+Stops the current global screen recording and returns the saved video file. This function now works on both iOS and Android.
 
-**Note:** On iOS, global recordings are stopped by the user interacting with the system's red status bar indicator (or control center). This function provides a programmatic stop for Android Only.
+**Platform:** iOS, Android
 
-**Platform:** Android (programmatic stop is effective on Android, but iOS relies on system UI interaction for stopping global recordings initiated by `RPSystemBroadcastPickerView`).
+**Returns:** Promise that resolves with the recording file or undefined if no recording was active
 
 **Example:**
 ```typescript
-import { stopGlobalRecording, getLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { stopGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-stopGlobalRecording();
-const file = getLastGlobalRecording();
+const file = await stopGlobalRecording();
 if (file) {
   console.log('Global recording saved:', file.path);
 }
 ```
 
-### `getLastGlobalRecording(): ScreenRecordingFile | undefined`
+### `retrieveLastGlobalRecording(): ScreenRecordingFile | undefined`
 
 Retrieves the most recently completed global recording file. Returns undefined if no global recording has been completed.
 
@@ -642,9 +648,9 @@ Retrieves the most recently completed global recording file. Returns undefined i
 
 **Example:**
 ```typescript
-import { getLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-const lastRecording = getLastGlobalRecording();
+const lastRecording = retrieveLastGlobalRecording();
 if (lastRecording) {
   console.log('Duration:', lastRecording.duration);
   console.log('File size:', lastRecording.size);
@@ -653,34 +659,52 @@ if (lastRecording) {
 
 ## Event Listeners
 
-### `addScreenRecordingListener(listener): () => void`
+### `addScreenRecordingListener(listener): number`
 
-Adds a listener for screen recording events (start, stop, error, etc.). Returns a cleanup function to remove the listener when no longer needed.
+Adds a listener for screen recording events (start, stop, error, etc.). Returns a listener ID that can be used to remove the listener.
 
 **Platform:** iOS, Android
 
 **Parameters:**
 -   `listener`: Callback function that receives screen recording events
 
-**Returns:** Cleanup function to remove the listener
+**Returns:** Listener ID number for removing the listener
+
+**Example:**
+```typescript
+import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
+
+const listenerId = addScreenRecordingListener((event) => {
+  console.log("Event type:", event.type, "Event reason:", event.reason);
+});
+```
+
+### `removeScreenRecordingListener(id): void`
+
+Removes a previously added screen recording event listener.
+
+**Platform:** iOS, Android
+
+**Parameters:**
+-   `id`: The listener ID returned from `addScreenRecordingListener`
 
 **Example:**
 ```typescript
 import { useEffect } from 'react';
-import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
+import { addScreenRecordingListener, removeScreenRecordingListener } from 'react-native-nitro-screen-recorder';
 
 useEffect(() => {
-  const removeListener = addScreenRecordingListener((event) => {
+  const listenerId = addScreenRecordingListener((event) => {
     console.log("Event type:", event.type, "Event reason:", event.reason);
   });
   
-  return () => removeListener();
+  return () => removeScreenRecordingListener(listenerId);
 }, []);
 ```
 
 ## Utilities
 
-### `clearCache(): void`
+### `clearRecordingCache(): void`
 
 Clears all cached recording files to free up storage space. This will delete temporary files but not files that have been explicitly saved.
 
@@ -688,9 +712,9 @@ Clears all cached recording files to free up storage space. This will delete tem
 
 **Example:**
 ```typescript
-import { clearCache } from 'react-native-nitro-screen-recorder';
+import { clearRecordingCache } from 'react-native-nitro-screen-recorder';
 
-clearCache(); // Frees up storage by removing temporary recording files
+clearRecordingCache(); // Frees up storage by removing temporary recording files
 ```
 
 ## Types
@@ -738,39 +762,6 @@ export type RecorderCameraStyle = {
 
 export type CameraDevice = 'front' | 'back';
 
-export type RecordingOptions =
-  | {
-      enableMic: boolean;
-      enableCamera: true;
-      cameraPreviewStyle: RecorderCameraStyle;
-      cameraDevice: CameraDevice;
-    }
-  | { 
-      enableCamera: false; 
-      enableMic: boolean; 
-    };
-
-export type InAppRecordingInput = {
-  options: RecordingOptions;
-  onRecordingFinished: (file: ScreenRecordingFile) => void;
-};
-
-// Global recording input options
-export type GlobalRecordingInputOptions = {
-  /** Whether to record microphone audio */
-  enableMic: boolean;
-};
-
-/**
- * Configuration for global recording sessions.
- */
-export type GlobalRecordingInput = {
-  options?: GlobalRecordingInputOptions;
-  /** Callback invoked when global recording encounters an error during start or execution. */
-  onRecordingError: (error: RecordingError) => void;
-};
-
-
 // Recording file information
 export interface ScreenRecordingFile {
   path: string;
@@ -796,7 +787,7 @@ export interface RecordingError {
 
 ### iOS
 -   **In-App Recording**: Full support with camera overlay
--   **Global Recording**: Requires user interaction to stop (red status bar indicator)
+-   **Global Recording**: Full programmatic control including start and stop functionality
 -   **Permissions**: Camera and microphone permissions handled automatically
 -   **App Extensions**: Uses broadcast extensions for global recording
 

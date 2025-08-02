@@ -39,7 +39,7 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib src/expo-plugin/build",
     "build:types": "tsc --project tsconfig.json",
     "build:plugin": "tsc -p src/expo-plugin/tsconfig.json && mkdir -p src/expo-plugin/build/support && cp -R src/expo-plugin/support/broadcastExtensionFiles src/expo-plugin/build/support/",
-    "prepare": "bob build && yarn build:plugin",
+    "prepare": "bob build && yarn nitrogen && yarn build:plugin",
     "nitrogen": "nitro-codegen",
     "release": "release-it --only-version"
   },

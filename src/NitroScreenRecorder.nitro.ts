@@ -63,7 +63,7 @@ export interface NitroScreenRecorder
     onRecordingError: (error: RecordingError) => void
   ): void;
   stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>;
-  getLastGlobalRecording(): ScreenRecordingFile | undefined;
+  retrieveLastGlobalRecording(): ScreenRecordingFile | undefined;
 
   // ============================================================================
   // UTILITIES

@@ -173,7 +173,7 @@ export default function ScreenRecorderExample() {
 - [Global Recording](#global-recording)
   - [`startGlobalRecording()`](#startglobalrecording-void)
   - [`stopGlobalRecording()`](#stopglobalrecording-void)
-  - [`getLastGlobalRecording()`](#getlastglobalrecording-screenrecordingfile--undefined)
+  - [`retrieveLastGlobalRecording()`](#retrieveLastGlobalRecording-screenrecordingfile--undefined)
 - [Event Listeners](#event-listeners)
   - [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener--void)
 - [Utilities](#utilities)
@@ -414,7 +414,7 @@ startGlobalRecording();
 
 ### `stopGlobalRecording(): void`
 
-Stops the current global screen recording and saves the video. The recorded file can be retrieved using `getLastGlobalRecording()`.
+Stops the current global screen recording and saves the video. The recorded file can be retrieved using `retrieveLastGlobalRecording()`.
 
 **Note:** On iOS, a broadcast is ended by tapping the red broadcasting dot in the corner of the screen. On Android, it's handled via button.
 
@@ -422,16 +422,16 @@ Stops the current global screen recording and saves the video. The recorded file
 
 **Example:**
 ```typescript
-import { stopGlobalRecording, getLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { stopGlobalRecording, retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
 
 stopGlobalRecording();
-const file = getLastGlobalRecording();
+const file = retrieveLastGlobalRecording();
 if (file) {
   console.log('Global recording saved:', file.path);
 }
 ```
 
-### `getLastGlobalRecording(): ScreenRecordingFile | undefined`
+### `retrieveLastGlobalRecording(): ScreenRecordingFile | undefined`
 
 Retrieves the most recently completed global recording file. Returns undefined if no global recording has been completed.
 
@@ -441,9 +441,9 @@ Retrieves the most recently completed global recording file. Returns undefined i
 
 **Example:**
 ```typescript
-import { getLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-const lastRecording = getLastGlobalRecording();
+const lastRecording = retrieveLastGlobalRecording();
 if (lastRecording) {
   console.log('Duration:', lastRecording.duration);
   console.log('File size:', lastRecording.size);

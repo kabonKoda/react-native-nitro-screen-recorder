@@ -376,7 +376,12 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     return Promise.async {
       guard self.isGlobalRecordingActive else {
         print("⚠️ stopGlobalRecording called but no active global recording.")
-        return nil
+        do {
+          return try self.retrieveLastGlobalRecording()
+        } catch {
+          print("❌ retrieveLastGlobalRecording failed after stop:", error)
+          return nil
+        }
       }
 
       let notif = "com.nitroscreenrecorder.stopBroadcast" as CFString
@@ -394,16 +399,16 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       try? await Task.sleep(nanoseconds: 500_000_000)
 
       do {
-        return try self.getLastGlobalRecording()
+        return try self.retrieveLastGlobalRecording()
       } catch {
-        print("❌ getLastGlobalRecording failed after stop:", error)
+        print("❌ retrieveLastGlobalRecording failed after stop:", error)
         return nil
       }
     }
   }
 
-  func getLastGlobalRecording() throws -> ScreenRecordingFile? {
-    print("🎬 getLastGlobalRecording: Starting function")
+  func retrieveLastGlobalRecording() throws -> ScreenRecordingFile? {
+    print("🎬 retrieveLastGlobalRecording: Starting function")
 
     // 1) Resolve app group doc dir
     print("📁 Attempting to get app group identifier...")
@@ -545,7 +550,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     print("   Size: \(result.size)")
     print("   Duration: \(result.duration)")
     print("   Mic: \(result.enabledMicrophone)")
-    print("🎬 getLastGlobalRecording: Function completed successfully")
+    print("🎬 retrieveLastGlobalRecording: Function completed successfully")
 
     return result
   }

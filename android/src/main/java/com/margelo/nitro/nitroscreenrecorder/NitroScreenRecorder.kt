@@ -326,7 +326,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     }
   }
 
-  override fun getLastGlobalRecording(): ScreenRecordingFile? {
+  override fun retrieveLastGlobalRecording(): ScreenRecordingFile? {
     return lastGlobalRecording?.let { file ->
       if (file.exists()) {
         ScreenRecordingFile(

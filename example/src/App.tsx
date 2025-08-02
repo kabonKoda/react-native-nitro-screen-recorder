@@ -6,7 +6,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import * as ScreenRecorder from 'react-native-nitro-screen-recorder';
+import * as ScreenRecorder from '../../';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 
@@ -15,15 +15,19 @@ export default function App() {
     ScreenRecorder.ScreenRecordingFile | undefined
   >();
 
-  const {
-    recording: globalRecording,
-    refetch,
-    // isError,
-    isLoading,
-    // error,
-  } = ScreenRecorder.useGlobalRecording({
-    refetchOnAppForeground: true,
-  });
+  const [globalRecording, setGlobalRecording] = useState<
+    ScreenRecorder.ScreenRecordingFile | undefined
+  >();
+
+  // const {
+  //   recording: globalRecording,
+  //   refetch,
+  //   // isError,
+  //   isLoading,
+  //   // error,
+  // } = ScreenRecorder.useGlobalRecording({
+  //   refetchOnAppForeground: true,
+  // });
 
   // @ts-ignore
   const inAppPlayer = useVideoPlayer(inAppRecording?.path);
@@ -105,11 +109,14 @@ export default function App() {
   };
 
   const handleStopGlobalRecording = () => {
-    ScreenRecorder.stopGlobalRecording();
+    ScreenRecorder.stopGlobalRecording().then((file) => {
+      setGlobalRecording(file);
+    });
   };
 
   const handleGetGlobalRecordingFile = () => {
-    refetch();
+    const file = ScreenRecorder.retrieveLastGlobalRecording();
+    setGlobalRecording(file);
   };
 
   const handleClearRecordingCache = () => {
@@ -221,7 +228,6 @@ export default function App() {
             />
           </View>
         </View>
-        {isLoading && <Text style={styles.loading}>Fetching files</Text>}
         <Text style={styles.playerLabel}>Global Recording Player</Text>
         <VideoView player={globalPlayer} style={styles.player} />
       </View>

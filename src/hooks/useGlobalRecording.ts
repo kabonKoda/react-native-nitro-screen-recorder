@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { ScreenRecordingFile } from '../types';
 import {
-  getLastGlobalRecording,
+  retrieveLastGlobalRecording,
   addScreenRecordingListener,
 } from '../functions';
 
@@ -68,7 +68,7 @@ async function delay(ms: number): Promise<void> {
  * ### What this hook does
  * - Listens to your package's global recording events (`began` → `ended`).
  * - On `ended`, waits ~1.5s so the extension/asset writer can finish closing the file,
- *   then resolves the latest recording via `getLastGlobalRecording()`.
+ *   then resolves the latest recording via `retrieveLastGlobalRecording()`.
  * - Optionally fetches the file when the app returns to the foreground.
  *
  *
@@ -111,7 +111,7 @@ export const useGlobalRecording = (
       setIsLoading(true);
       clearError();
       await delay(1500);
-      const latest = getLastGlobalRecording();
+      const latest = retrieveLastGlobalRecording();
 
       if (latest) {
         if (isSameRecording(recording, latest)) return;
@@ -134,7 +134,7 @@ export const useGlobalRecording = (
   const refetch = useCallback(() => {
     try {
       clearError();
-      const latest = getLastGlobalRecording();
+      const latest = retrieveLastGlobalRecording();
 
       if (latest) {
         if (isSameRecording(recording, latest)) return;

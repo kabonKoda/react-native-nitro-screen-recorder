@@ -227,21 +227,18 @@ export function startGlobalRecording(input: GlobalRecordingInput): void {
 
 /**
  * Stops the current global screen recording and saves the video.
- * The recorded file can be retrieved using getLastGlobalRecording().
- * Note on iOS, a broadcast is ended by tapping on the red broadcasting dot
- * in the corner of the screen. On Android, its handled via button.
+ * The recorded file can be retrieved using retrieveLastGlobalRecording().
  *
- * @platform Android-only
+ * @platform Android/ios
  * @example
  * ```typescript
- * stopGlobalRecording();
- * const file = getLastGlobalRecording();
+ * const file = await stopGlobalRecording();
  * if (file) {
  *   console.log('Global recording saved:', file.path);
  * }
  * ```
  */
-export function stopGlobalRecording(): Promise<
+export async function stopGlobalRecording(): Promise<
   ScreenRecordingFile | undefined
 > {
   return NitroScreenRecorderHybridObject.stopGlobalRecording();
@@ -255,15 +252,15 @@ export function stopGlobalRecording(): Promise<
  * @returns The last global recording file or undefined if none exists
  * @example
  * ```typescript
- * const lastRecording = getLastGlobalRecording();
+ * const lastRecording = retrieveLastGlobalRecording();
  * if (lastRecording) {
  *   console.log('Duration:', lastRecording.duration);
  *   console.log('File size:', lastRecording.size);
  * }
  * ```
  */
-export function getLastGlobalRecording(): ScreenRecordingFile | undefined {
-  return NitroScreenRecorderHybridObject.getLastGlobalRecording();
+export function retrieveLastGlobalRecording(): ScreenRecordingFile | undefined {
+  return NitroScreenRecorderHybridObject.retrieveLastGlobalRecording();
 }
 
 // ============================================================================
