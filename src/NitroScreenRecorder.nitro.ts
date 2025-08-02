@@ -51,8 +51,8 @@ export interface NitroScreenRecorder
     onRecordingFinished: (file: ScreenRecordingFile) => void
     // onRecordingError: (error: RecordingError) => void
   ): void;
-  stopInAppRecording(): void;
-  cancelInAppRecording(): void;
+  stopInAppRecording(): Promise<ScreenRecordingFile | undefined>;
+  cancelInAppRecording(): Promise<void>;
 
   // ============================================================================
   // GLOBAL RECORDING
@@ -62,7 +62,7 @@ export interface NitroScreenRecorder
     enableMic: boolean,
     onRecordingError: (error: RecordingError) => void
   ): void;
-  stopGlobalRecording(): void;
+  stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>;
   getLastGlobalRecording(): ScreenRecordingFile | undefined;
 
   // ============================================================================

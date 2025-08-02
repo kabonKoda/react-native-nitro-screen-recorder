@@ -165,7 +165,9 @@ export async function startInAppRecording(
  * stopInAppRecording(); // File will be available in onRecordingFinished callback
  * ```
  */
-export function stopInAppRecording(): void {
+export async function stopInAppRecording(): Promise<
+  ScreenRecordingFile | undefined
+> {
   if (isAndroid) {
     console.warn('`stopInAppRecording` is only supported on iOS.');
     return;
@@ -183,7 +185,7 @@ export function stopInAppRecording(): void {
  * cancelInAppRecording(); // Recording discarded, no file saved
  * ```
  */
-export function cancelInAppRecording(): void {
+export async function cancelInAppRecording(): Promise<void> {
   if (isAndroid) {
     console.warn('`cancelInAppRecording` is only supported on iOS.');
     return;
@@ -239,7 +241,9 @@ export function startGlobalRecording(input: GlobalRecordingInput): void {
  * }
  * ```
  */
-export function stopGlobalRecording(): void {
+export function stopGlobalRecording(): Promise<
+  ScreenRecordingFile | undefined
+> {
   return NitroScreenRecorderHybridObject.stopGlobalRecording();
 }
 

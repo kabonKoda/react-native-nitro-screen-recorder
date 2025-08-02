@@ -190,64 +190,84 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  public func stopInAppRecording() throws {
-    // build a unique temp URL
-    let fileName = "screen_capture_\(UUID().uuidString).mp4"
-    let outputURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent(fileName)
+  public func stopInAppRecording() throws -> Promise<ScreenRecordingFile?> {
+    return Promise.async {
+      return await withCheckedContinuation { continuation in
+        // build a unique temp URL
+        let fileName = "screen_capture_\(UUID().uuidString).mp4"
+        let outputURL = FileManager.default.temporaryDirectory
+          .appendingPathComponent(fileName)
 
-    // remove any existing file
-    try? FileManager.default.removeItem(at: outputURL)
+        // remove any existing file
+        try? FileManager.default.removeItem(at: outputURL)
 
-    // call the new API
-    recorder.stopRecording(withOutput: outputURL) { [weak self] error in
-      guard let self = self else { return }
+        // call the new API
+        self.recorder.stopRecording(withOutput: outputURL) { [weak self] error in
+          guard let self = self else {
+            print("❌ stopInAppRecording: self went away before completion")
+            continuation.resume(returning: nil)
+            return
+          }
 
-      if let error = error {
-        print("❌ Error writing recording to \(outputURL):", error.localizedDescription)
-        return
-      }
+          if let error = error {
+            print("❌ Error writing recording to \(outputURL):", error.localizedDescription)
+            continuation.resume(returning: nil)
+            return
+          }
 
-      do {
-        // read file attributes
-        let attrs = try FileManager.default.attributesOfItem(atPath: outputURL.path)
-        let asset = AVURLAsset(url: outputURL)
-        let duration = CMTimeGetSeconds(asset.duration)
+          do {
+            // read file attributes
+            let attrs = try FileManager.default.attributesOfItem(atPath: outputURL.path)
+            let asset = AVURLAsset(url: outputURL)
+            let duration = CMTimeGetSeconds(asset.duration)
 
-        // build your ScreenRecordingFile
-        let file = ScreenRecordingFile(
-          path: outputURL.path,
-          name: outputURL.lastPathComponent,
-          size: attrs[.size] as? Double ?? 0,
-          duration: duration,
-          enabledMicrophone: self.recorder.isMicrophoneEnabled,
-        )
+            // build your ScreenRecordingFile
+            let file = ScreenRecordingFile(
+              path: outputURL.path,
+              name: outputURL.lastPathComponent,
+              size: attrs[.size] as? Double ?? 0,
+              duration: duration,
+              enabledMicrophone: self.recorder.isMicrophoneEnabled
+            )
 
-        print("✅ Recording finished and saved to:", outputURL.path)
-        // invoke your callback
-        self.onInAppRecordingFinishedCallback?(file)
-      } catch {
-        print("⚠️ Failed to build ScreenRecordingFile:", error.localizedDescription)
+            print("✅ Recording finished and saved to:", outputURL.path)
+            self.onInAppRecordingFinishedCallback?(file)
+            continuation.resume(returning: file)
+          } catch {
+            print("⚠️ Failed to build ScreenRecordingFile:", error.localizedDescription)
+            continuation.resume(returning: nil)
+          }
+        }
       }
     }
   }
 
-  public func cancelInAppRecording() throws {
-    // If a recording session is in progress, stop it and write out to a temp URL
-    if recorder.isRecording {
-      let tempURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("canceled_\(UUID().uuidString).mp4")
-      recorder.stopRecording(withOutput: tempURL) { error in
-        if let error = error {
-          print("⚠️ Error stopping recording during cancel:", error.localizedDescription)
+  public func cancelInAppRecording() throws -> Promise<Void> {
+    return Promise.async {
+      return await withCheckedContinuation { continuation in
+        // If a recording session is in progress, stop it and write out to a temp URL
+        if self.recorder.isRecording {
+          let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("canceled_\(UUID().uuidString).mp4")
+          self.recorder.stopRecording(withOutput: tempURL) { error in
+            if let error = error {
+              print("⚠️ Error stopping recording during cancel:", error.localizedDescription)
+            } else {
+              print("🗑️ In-app recording stopped and wrote to temp URL (canceled):\(tempURL.path)")
+            }
+
+            self.safelyClearInAppRecordingFiles()
+            print("🛑 In-app recording canceled and buffers cleared")
+            continuation.resume(returning: ())
+          }
         } else {
-          print("🗑️ In‑app recording stopped and wrote to temp URL (canceled):\(tempURL.path)")
+          // Not recording, just clear
+          self.safelyClearInAppRecordingFiles()
+          print("🛑 In-app recording canceled and buffers cleared (no active recording)")
+          continuation.resume(returning: ())
         }
       }
     }
-
-    safelyClearInAppRecordingFiles()
-    print("🛑 In‑app recording canceled and buffers cleared")
   }
 
   /**
@@ -348,19 +368,38 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     presentGlobalBroadcastModal(enableMicrophone: enableMic)
 
   }
+  // This is a hack I learned through:
+  // https://mehmetbaykar.com/posts/how-to-gracefully-stop-a-broadcast-upload-extension/
+  // Basically you send a kill command through Darwin and you suppress
+  // the system error
+  func stopGlobalRecording() throws -> Promise<ScreenRecordingFile?> {
+    return Promise.async {
+      guard self.isGlobalRecordingActive else {
+        print("⚠️ stopGlobalRecording called but no active global recording.")
+        return nil
+      }
 
-  func stopGlobalRecording() throws {
-    let notif = "com.nitroscreenrecorder.stopBroadcast" as CFString
-    CFNotificationCenterPostNotification(
-      CFNotificationCenterGetDarwinNotifyCenter(),
-      CFNotificationName(notif),
-      nil,
-      nil,
-      true  // deliver immediately
-    )
+      let notif = "com.nitroscreenrecorder.stopBroadcast" as CFString
+      CFNotificationCenterPostNotification(
+        CFNotificationCenterGetDarwinNotifyCenter(),
+        CFNotificationName(notif),
+        nil,
+        nil,
+        true
+      )
+      // Reflect intent locally.
+      self.isGlobalRecordingActive = false
 
-    // Optional UX bookkeeping
-    isGlobalRecordingActive = false
+      // Small grace period for the broadcast to wind down.
+      try? await Task.sleep(nanoseconds: 500_000_000)
+
+      do {
+        return try self.getLastGlobalRecording()
+      } catch {
+        print("❌ getLastGlobalRecording failed after stop:", error)
+        return nil
+      }
+    }
   }
 
   func getLastGlobalRecording() throws -> ScreenRecordingFile? {
