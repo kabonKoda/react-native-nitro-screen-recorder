@@ -1,7 +1,7 @@
 # Changelog
 ## [0.1.9] - 2025-08-02
 ### Fix
-- Rewrite of app group entitlements file, wasn't applying correctly
+- Rewrite of app group entitlements file, wasn't applying correctly to the main app
 
 ## [0.1.8] - 2025-08-02
 ### Fix
