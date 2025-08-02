@@ -3,69 +3,64 @@ import {
   withAndroidManifest,
   withMainActivity,
 } from '@expo/config-plugins';
+
 import { ConfigProps } from '../@types';
-import { makePluginLogger } from '../ios/PluginLogger';
+import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
 
+/**
+ * Adds the Java / Kotlin glue code + manifest entries that our native
+ * Android screen-recording module needs.
+ */
 export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
-  config,
-  props = {}
+  config
 ) => {
-  const l = makePluginLogger(props.showPluginLogs ?? false);
-
-  // Add permissions and services to AndroidManifest.xml
+  /* ------------------------------------------------------------------ */
+  /* 1. AndroidManifest.xml                                             */
+  /* ------------------------------------------------------------------ */
   config = withAndroidManifest(config, (mod) => {
-    l.step(
-      'Adding screen recording permissions and services to AndroidManifest.xml'
+    ScreenRecorderLog.log(
+      'Adding screen-recording permissions and service to AndroidManifest.xml'
     );
 
     const androidManifest = mod.modResults;
     const application = androidManifest.manifest.application?.[0];
-
     if (!application) {
-      throw new Error('Could not find application in AndroidManifest.xml');
+      throw new Error('Could not find <application> in AndroidManifest.xml');
     }
 
-    // Add required permissions (still needed for Global Recording)
+    /* ---------- permissions ----------------------------------------- */
     const requiredPermissions = [
       'android.permission.FOREGROUND_SERVICE',
       'android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION',
       'android.permission.RECORD_AUDIO',
     ];
-
-    if (!androidManifest.manifest['uses-permission']) {
-      androidManifest.manifest['uses-permission'] = [];
-    }
+    androidManifest.manifest['uses-permission'] =
+      androidManifest.manifest['uses-permission'] ?? [];
 
     requiredPermissions.forEach((permission) => {
-      const existingPermission = androidManifest.manifest[
-        'uses-permission'
-      ]?.find((perm) => perm.$?.['android:name'] === permission);
-
-      if (!existingPermission) {
+      const exists = androidManifest.manifest['uses-permission']!.some(
+        (perm) => perm.$?.['android:name'] === permission
+      );
+      if (!exists) {
         androidManifest.manifest['uses-permission']!.push({
-          $: {
-            'android:name': permission,
-          },
+          $: { 'android:name': permission },
         });
-        l.info(`✅ Added permission: ${permission}`);
+        ScreenRecorderLog.log(`✅ added permission ${permission}`);
       } else {
-        l.info(`ℹ️ Permission already exists: ${permission}`);
+        ScreenRecorderLog.log(`ℹ️ permission already present ${permission}`);
       }
     });
 
-    if (!application.service) {
-      application.service = [];
-    }
-
-    // Add only the Global ScreenRecordingService
+    /* ---------- foreground service ---------------------------------- */
     const serviceName =
       'com.margelo.nitro.nitroscreenrecorder.ScreenRecordingService';
-    const existingService = application.service?.find(
-      (service) => service.$?.['android:name'] === serviceName
-    );
+    application.service = application.service ?? [];
 
-    if (!existingService) {
-      application.service!.push({
+    const serviceExists = application.service.some(
+      (s) => s.$?.['android:name'] === serviceName
+    );
+    if (!serviceExists) {
+      application.service.push({
         $: {
           'android:name': serviceName,
           'android:enabled': 'true',
@@ -73,224 +68,176 @@ export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
           'android:foregroundServiceType': 'mediaProjection',
         },
       });
-      l.info(`✅ Added Global ScreenRecordingService to AndroidManifest.xml`);
+      ScreenRecorderLog.log('✅ added ScreenRecordingService');
     } else {
-      l.info(
-        `ℹ️ Global ScreenRecordingService already exists in AndroidManifest.xml`
-      );
+      ScreenRecorderLog.log('ℹ️ ScreenRecordingService already present');
     }
 
     return mod;
   });
 
-  // Modify MainActivity to handle activity results (still needed for Global Recording)
+  /* ------------------------------------------------------------------ */
+  /* 2. MainActivity.java / .kt patch                                   */
+  /* ------------------------------------------------------------------ */
   config = withMainActivity(config, (mod) => {
-    l.step('Modifying MainActivity for screen recording activity results');
-    const { modResults } = mod;
-    let mainActivityContent = modResults.contents;
-    const isKotlin =
-      mainActivityContent.includes('class MainActivity') &&
-      (mainActivityContent.includes('override fun') ||
-        mainActivityContent.includes('kotlin'));
+    ScreenRecorderLog.log(
+      'Injecting onActivityResult handler into MainActivity'
+    );
 
-    if (isKotlin) {
-      mainActivityContent = addKotlinScreenRecordingSupport(
-        mainActivityContent,
-        l
-      );
-    } else {
-      mainActivityContent = addJavaScreenRecordingSupport(
-        mainActivityContent,
-        l
-      );
-    }
-    modResults.contents = mainActivityContent;
+    const { modResults } = mod;
+    let content = modResults.contents;
+    const isKotlin =
+      content.includes('class MainActivity') &&
+      (content.includes('override fun') || content.includes('kotlin'));
+
+    content = isKotlin
+      ? patchKotlinMainActivity(content)
+      : patchJavaMainActivity(content);
+
+    modResults.contents = content;
     return mod;
   });
 
   return config;
 };
 
-// This function remains unchanged as it's still needed for Global Recording
-function addKotlinScreenRecordingSupport(content: string, l: any): string {
-  // Required imports
-  const requiredImports = [
+/* ==================================================================== */
+/*  Kotlin helper                                                       */
+/* ==================================================================== */
+function patchKotlinMainActivity(src: string): string {
+  const imports = [
     'import com.margelo.nitro.nitroscreenrecorder.NitroScreenRecorder',
+    'import com.margelo.nitro.nitroscreenrecorder.ScreenRecorderLog',
     'import android.content.Intent',
-    'import android.util.Log',
   ];
+  src = ensureImports(src, imports, false);
 
-  // Add imports if not present
-  requiredImports.forEach((importStatement) => {
-    if (!content.includes(importStatement)) {
-      const importRegex = /(import\s+.*\n)/g;
-      let lastImportMatch;
-      let match;
-
-      while ((match = importRegex.exec(content)) !== null) {
-        lastImportMatch = match;
-      }
-
-      if (lastImportMatch) {
-        const insertPosition =
-          lastImportMatch.index + lastImportMatch[0].length;
-        content =
-          content.slice(0, insertPosition) +
-          importStatement +
-          '\n' +
-          content.slice(insertPosition);
-      }
-    }
-  });
-
-  // Add onActivityResult method if not present
-  if (!content.includes('onActivityResult')) {
-    const classEndRegex = /(\s*)\}(\s*)$/;
-    const match = content.match(classEndRegex);
-
-    if (match) {
-      const onActivityResultMethod = `
+  /* inject onActivityResult if missing -------------------------------- */
+  if (!src.includes('onActivityResult(')) {
+    const body = `
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
-    Log.d("MainActivity", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
-    
+    ScreenRecorderLog.log("[MainActivity] onActivityResult requestCode=$requestCode resultCode=$resultCode")
+
     try {
-      // Handle screen recording activity results
       NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data)
     } catch (e: Exception) {
-      Log.e("MainActivity", "Error handling activity result: \${e.message}")
+      ScreenRecorderLog.error("[MainActivity] error: \${e.message}")
       e.printStackTrace()
     }
-  }
-`;
-      const insertPosition = match.index!;
-      content =
-        content.slice(0, insertPosition) +
-        onActivityResultMethod +
-        content.slice(insertPosition);
-      l.info('✅ Added onActivityResult method to Kotlin MainActivity');
-    }
-  } else {
-    if (!content.includes('NitroScreenRecorder.handleActivityResult')) {
-      const onActivityResultRegex =
-        /(override\s+fun\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
-      const match = content.match(onActivityResultRegex);
+  }`;
+    src = insertBeforeClassEnd(src, body);
+    ScreenRecorderLog.log('✅ added onActivityResult to Kotlin MainActivity');
+  } else if (
+    !src.includes('NitroScreenRecorder.handleActivityResult') &&
+    src.includes('onActivityResult(')
+  ) {
+    // extend existing method
+    const regex =
+      /(override\s+fun\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
+    src = src.replace(
+      regex,
+      `$1$2
 
-      if (match) {
-        const screenRecordingHandler = `
-    
     try {
-      // Handle screen recording activity results
       NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data)
     } catch (e: Exception) {
-      Log.e("MainActivity", "Error handling activity result: \${e.message}")
+      ScreenRecorderLog.error("[MainActivity] error: \${e.message}")
       e.printStackTrace()
-    }`;
-        if (match?.[1] && match?.[2]) {
-          content = content.replace(
-            onActivityResultRegex,
-            match[1] + match[2] + screenRecordingHandler
-          );
-
-          l.info(
-            '✅ Added screen recording handler to existing onActivityResult method'
-          );
-        }
-      }
-    } else {
-      l.info(
-        'ℹ️ Screen recording handler already exists in onActivityResult method'
-      );
-    }
+    }`
+    );
+    ScreenRecorderLog.log(
+      '✅ injected screen-recording handler into existing Kotlin onActivityResult'
+    );
   }
-  return content;
+  return src;
 }
 
-// This function remains unchanged as it's still needed for Global Recording
-function addJavaScreenRecordingSupport(content: string, l: any): string {
-  const requiredImports = [
+/* ==================================================================== */
+/*  Java helper                                                         */
+/* ==================================================================== */
+function patchJavaMainActivity(src: string): string {
+  const imports = [
     'import android.content.Intent;',
     'import com.margelo.nitro.nitroscreenrecorder.NitroScreenRecorder;',
-    'import android.util.Log;',
+    'import com.margelo.nitro.nitroscreenrecorder.ScreenRecorderLog;',
   ];
+  src = ensureImports(src, imports, true);
 
-  requiredImports.forEach((importStatement) => {
-    if (!content.includes(importStatement)) {
-      const importRegex = /(import\s+.*;\s*\n)/g;
-      let lastImportMatch;
-      let match;
-      while ((match = importRegex.exec(content)) !== null) {
-        lastImportMatch = match;
-      }
-      if (lastImportMatch) {
-        const insertPosition =
-          lastImportMatch.index + lastImportMatch[0].length;
-        content =
-          content.slice(0, insertPosition) +
-          importStatement +
-          '\n' +
-          content.slice(insertPosition);
-      }
-    }
-  });
-
-  if (!content.includes('onActivityResult')) {
-    const classEndRegex = /(\s*)\}(\s*)$/;
-    const match = content.match(classEndRegex);
-    if (match) {
-      const onActivityResultMethod = `
+  if (!src.includes('onActivityResult(')) {
+    const body = `
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
-    Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
-    
-    try {
-      // Handle screen recording activity results
-      NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
-    } catch (Exception e) {
-      Log.e("MainActivity", "Error handling activity result: " + e.getMessage());
-      e.printStackTrace();
-    }
-  }
-`;
-      const insertPosition = match.index!;
-      content =
-        content.slice(0, insertPosition) +
-        onActivityResultMethod +
-        content.slice(insertPosition);
-      l.info('✅ Added onActivityResult method to Java MainActivity');
-    }
-  } else {
-    if (!content.includes('NitroScreenRecorder.handleActivityResult')) {
-      const onActivityResultRegex =
-        /(@Override\s+public\s+void\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
-      const match = content.match(onActivityResultRegex);
-      if (match) {
-        const screenRecordingHandler = `
-    
-    try {
-      // Handle screen recording activity results
-      NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
-    } catch (Exception e) {
-      Log.e("MainActivity", "Error handling activity result: " + e.getMessage());
-      e.printStackTrace();
-    }`;
-        if (match?.[1] && match?.[2]) {
-          content = content.replace(
-            onActivityResultRegex,
-            match[1] + match[2] + screenRecordingHandler
-          );
+    ScreenRecorderLog.log("[MainActivity] onActivityResult requestCode=" + requestCode + " resultCode=" + resultCode);
 
-          l.info(
-            '✅ Added screen recording handler to existing onActivityResult method'
-          );
-        }
-      }
-    } else {
-      l.info(
-        'ℹ️ Screen recording handler already exists in onActivityResult method'
-      );
+    try {
+      NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
+    } catch (Exception e) {
+      ScreenRecorderLog.error("[MainActivity] error: " + e.getMessage());
+      e.printStackTrace();
     }
+  }`;
+    src = insertBeforeClassEnd(src, body);
+    ScreenRecorderLog.log('✅ added onActivityResult to Java MainActivity');
+  } else if (
+    !src.includes('NitroScreenRecorder.handleActivityResult') &&
+    src.includes('onActivityResult(')
+  ) {
+    const regex =
+      /(@Override\s+public\s+void\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
+    src = src.replace(
+      regex,
+      `$1$2
+
+    try {
+      NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
+    } catch (Exception e) {
+      ScreenRecorderLog.error("[MainActivity] error: " + e.getMessage());
+      e.printStackTrace();
+    }`
+    );
+    ScreenRecorderLog.log(
+      '✅ injected screen-recording handler into existing Java onActivityResult'
+    );
   }
-  return content;
+  return src;
+}
+
+/* ==================================================================== */
+/*  tiny utilities                                                      */
+/* ==================================================================== */
+
+/**
+ * Inserts any imports from `imports` that are missing in `src`.
+ */
+function ensureImports(src: string, imports: string[], java: boolean): string {
+  const regex = java ? /(import\s+.*;\s*\n)/g : /(import\s+.*\n)/g;
+  imports.forEach((imp) => {
+    if (!src.includes(imp)) {
+      let lastMatch: RegExpExecArray | null;
+      let m: RegExpExecArray | null;
+      lastMatch = null;
+      while ((m = regex.exec(src)) !== null) lastMatch = m;
+      if (lastMatch) {
+        const insertPos = lastMatch.index + lastMatch[0].length;
+        src = src.slice(0, insertPos) + imp + '\n' + src.slice(insertPos);
+      }
+    }
+  });
+  return src;
+}
+
+/**
+ * Inserts `snippet` right before the last `}` of the class file.
+ */
+function insertBeforeClassEnd(src: string, snippet: string): string {
+  const classEndRegex = /(\s*)\}(\s*)$/;
+  const match = src.match(classEndRegex);
+  if (match) {
+    return (
+      src.slice(0, match.index!) + snippet + '\n' + src.slice(match.index!)
+    );
+  }
+  return src;
 }

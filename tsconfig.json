@@ -1,4 +1,5 @@
 {
+  "extends": "expo-module-scripts/tsconfig.base",
   "compilerOptions": {
     "allowJs": false,
     "allowUnreachableCode": false,
@@ -23,5 +24,5 @@
     "declaration": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "lib", "example"]
+  "exclude": ["node_modules", "lib", "example", "src/expo-plugin"]
 }

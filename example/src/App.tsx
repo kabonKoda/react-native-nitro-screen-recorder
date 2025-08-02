@@ -96,7 +96,7 @@ export default function App() {
   const handleStartGlobalRecording = () => {
     ScreenRecorder.startGlobalRecording({
       options: {
-        enableMic: false,
+        enableMic: true,
       },
       onRecordingError: (error) => {
         console.log('Global recording error', error);

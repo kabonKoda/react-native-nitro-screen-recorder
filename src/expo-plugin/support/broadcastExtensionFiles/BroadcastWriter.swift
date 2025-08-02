@@ -8,7 +8,7 @@ import CoreGraphics
 import Foundation
 import ReplayKit
 
-extension AVAssetWriter.Status: CustomStringConvertible {
+extension AVAssetWriter.Status: @retroactive CustomStringConvertible {
   public var description: String {
     switch self {
     case .cancelled:

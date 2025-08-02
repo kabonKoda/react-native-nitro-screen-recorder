@@ -19,7 +19,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   let recorder = RPScreenRecorder.shared()
   private var inAppRecordingActive: Bool = false
-
+  private var isGlobalRecordingActive: Bool = false
   private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
   private var recordingEventListeners: [Listener<ScreenRecordingListener>] = []
   private var nextListenerId: Double = 0
@@ -53,12 +53,14 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   @objc private func handleScreenRecordingChange() {
     let type: RecordingEventType
     let reason: RecordingEventReason
+
     if UIScreen.main.isCaptured {
       reason = .began
       if inAppRecordingActive {
         type = .withinapp
       } else {
         type = .global
+        isGlobalRecordingActive = true
       }
     } else {
       reason = .ended
@@ -66,6 +68,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
         type = .withinapp
       } else {
         type = .global
+        isGlobalRecordingActive = false
       }
     }
     let event = ScreenRecordingEvent(type: type, reason: reason)
@@ -308,23 +311,34 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   func startGlobalRecording(enableMic: Bool, onRecordingError: @escaping (RecordingError) -> Void)
     throws
   {
-    // Validate that we can access the app group (needed for global recordings)
-    guard let appGroupId = try? getAppGroupIdentifier() else {
+    guard !isGlobalRecordingActive else {
+      print("⚠️ Attempted to start a global recording, but one is already active.")
       let error = RecordingError(
-        name: "APP_GROUP_ACCESS_FAILED",
-        message: "Could not access app group identifier required for global recording. Something is wrong with your entitlements."
+        name: "BROADCAST_ALREADY_ACTIVE",
+        message: "A screen recording session is already in progress."
       )
       onRecordingError(error)
       return
     }
 
+    // Validate that we can access the app group (needed for global recordings)
+    guard let appGroupId = try? getAppGroupIdentifier() else {
+      let error = RecordingError(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message:
+          "Could not access app group identifier required for global recording. Something is wrong with your entitlements."
+      )
+      onRecordingError(error)
+      return
+    }
     guard
       FileManager.default
         .containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
     else {
       let error = RecordingError(
         name: "APP_GROUP_CONTAINER_FAILED",
-        message: "Could not access app group container required for global recording. Something is wrong with your entitlements."
+        message:
+          "Could not access app group container required for global recording. Something is wrong with your entitlements."
       )
       onRecordingError(error)
       return
@@ -333,69 +347,168 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     // Present the broadcast picker
     presentGlobalBroadcastModal(enableMicrophone: enableMic)
 
-
   }
 
   func stopGlobalRecording() throws {
-    // no-op
+    let notif = "com.nitroscreenrecorder.stopBroadcast" as CFString
+    CFNotificationCenterPostNotification(
+      CFNotificationCenterGetDarwinNotifyCenter(),
+      CFNotificationName(notif),
+      nil,
+      nil,
+      true  // deliver immediately
+    )
+
+    // Optional UX bookkeeping
+    isGlobalRecordingActive = false
   }
 
   func getLastGlobalRecording() throws -> ScreenRecordingFile? {
+    print("🎬 getLastGlobalRecording: Starting function")
+
     // 1) Resolve app group doc dir
-    guard let appGroupId = try? getAppGroupIdentifier(),
+    print("📁 Attempting to get app group identifier...")
+    guard let appGroupId = try? getAppGroupIdentifier() else {
+      print("❌ Failed to get app group identifier")
+      throw RecorderError.error(
+        name: "APP_GROUP_ACCESS_FAILED",
+        message: "Could not get app group identifier"
+      )
+    }
+    print("✅ App group ID: \(appGroupId)")
+
+    guard
       let docsURL = FileManager.default
         .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
         .appendingPathComponent("Library/Documents/", isDirectory: true)
     else {
+      print("❌ Failed to access app group container for ID: \(appGroupId)")
       throw RecorderError.error(
         name: "APP_GROUP_ACCESS_FAILED",
         message: "Could not access app group container"
       )
     }
+    print("✅ Documents URL: \(docsURL.path)")
+
+    // Check if directory exists, create if needed
+    if !FileManager.default.fileExists(atPath: docsURL.path) {
+      print("📁 Documents directory doesn't exist, creating it...")
+      do {
+        try FileManager.default.createDirectory(
+          at: docsURL, withIntermediateDirectories: true, attributes: nil)
+        print("✅ Created Documents directory")
+      } catch {
+        print("❌ Failed to create Documents directory: \(error)")
+        throw RecorderError.error(
+          name: "DIRECTORY_CREATION_FAILED",
+          message: "Could not create Documents directory: \(error.localizedDescription)"
+        )
+      }
+    } else {
+      print("✅ Documents directory already exists")
+    }
 
     // 2) Find the newest .mp4
+    print("🔍 Scanning directory for .mp4 files...")
     let keys: [URLResourceKey] = [
       .contentModificationDateKey, .creationDateKey, .isRegularFileKey, .fileSizeKey,
     ]
-    let contents = try FileManager.default.contentsOfDirectory(
-      at: docsURL,
-      includingPropertiesForKeys: keys,
-      options: [.skipsHiddenFiles]
-    )
+
+    let contents: [URL]
+    do {
+      contents = try FileManager.default.contentsOfDirectory(
+        at: docsURL,
+        includingPropertiesForKeys: keys,
+        options: [.skipsHiddenFiles]
+      )
+      print("📂 Found \(contents.count) total files in directory")
+    } catch {
+      print("❌ Failed to read directory contents: \(error)")
+      throw error
+    }
 
     let mp4s = contents.filter { $0.pathExtension.lowercased() == "mp4" }
+    print("🎥 Found \(mp4s.count) .mp4 files")
 
-    guard
-      let latestURL = try mp4s.max(by: { a, b in
-        let va = try a.resourceValues(forKeys: Set(keys))
-        let vb = try b.resourceValues(forKeys: Set(keys))
-        let da = va.contentModificationDate ?? va.creationDate ?? .distantPast
-        let db = vb.contentModificationDate ?? vb.creationDate ?? .distantPast
-        return da < db
-      })
-    else {
-      // Nothing there yet
+    if mp4s.isEmpty {
+      print("⚠️ No .mp4 files found, returning nil")
       return nil
     }
 
+    // Log all mp4 files found
+    for (index, mp4) in mp4s.enumerated() {
+      print("📄 MP4 #\(index + 1): \(mp4.lastPathComponent)")
+    }
+
+    guard
+      let latestURL = try mp4s.max(by: { a, b in
+        do {
+          let va = try a.resourceValues(forKeys: Set(keys))
+          let vb = try b.resourceValues(forKeys: Set(keys))
+          let da = va.contentModificationDate ?? va.creationDate ?? .distantPast
+          let db = vb.contentModificationDate ?? vb.creationDate ?? .distantPast
+
+          print("📅 Comparing dates:")
+          print("   \(a.lastPathComponent): \(da)")
+          print("   \(b.lastPathComponent): \(db)")
+          print("   Result: \(a.lastPathComponent) \(da < db ? "<" : ">=") \(b.lastPathComponent)")
+
+          return da < db
+        } catch {
+          print("❌ Error getting resource values for comparison: \(error)")
+          throw error
+        }
+      })
+    else {
+      print("❌ Failed to find latest file (this shouldn't happen if mp4s is not empty)")
+      return nil
+    }
+
+    print("🏆 Latest file selected: \(latestURL.lastPathComponent)")
+
     // 3) Build ScreenRecordingFile
-    let attrs = try FileManager.default.attributesOfItem(atPath: latestURL.path)
+    print("📊 Getting file attributes...")
+    let attrs: [FileAttributeKey: Any]
+    do {
+      attrs = try FileManager.default.attributesOfItem(atPath: latestURL.path)
+      print("✅ Successfully got file attributes")
+    } catch {
+      print("❌ Failed to get file attributes: \(error)")
+      throw error
+    }
+
     let size = (attrs[.size] as? NSNumber)?.doubleValue ?? 0.0
+    print("📏 File size: \(size) bytes (\(size / 1024 / 1024) MB)")
+
+    print("🎵 Creating AVURLAsset for duration...")
     let asset = AVURLAsset(url: latestURL)
     let duration = CMTimeGetSeconds(asset.duration)
+    print("⏱️ Duration: \(duration) seconds")
 
     // Read mic flag saved by the extension
+    print("🎤 Checking microphone setting...")
     let micEnabled =
       UserDefaults(suiteName: appGroupId)?
       .bool(forKey: "LastBroadcastMicrophoneWasEnabled") ?? false
+    print("🎤 Microphone was enabled: \(micEnabled)")
 
-    return ScreenRecordingFile(
+    let result = ScreenRecordingFile(
       path: latestURL.path,
       name: latestURL.lastPathComponent,
       size: size,
       duration: duration,
       enabledMicrophone: micEnabled
     )
+
+    print("✅ Successfully created ScreenRecordingFile:")
+    print("   Path: \(result.path)")
+    print("   Name: \(result.name)")
+    print("   Size: \(result.size)")
+    print("   Duration: \(result.duration)")
+    print("   Mic: \(result.enabledMicrophone)")
+    print("🎬 getLastGlobalRecording: Function completed successfully")
+
+    return result
   }
 
   func safelyClearGlobalRecordingFiles() throws {

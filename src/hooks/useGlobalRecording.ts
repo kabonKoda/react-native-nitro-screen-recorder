@@ -59,7 +59,7 @@ function isSameRecording(
  * Promise-based delay helper.
  */
 async function delay(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
+  await new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -96,7 +96,8 @@ export const useGlobalRecording = (
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const appState = useRef(AppState.currentState);
   const recordingInProgressRef = useRef(false);
 

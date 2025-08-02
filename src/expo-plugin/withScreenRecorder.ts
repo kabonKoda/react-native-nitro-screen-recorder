@@ -7,6 +7,7 @@ import type { ConfigPlugin } from '@expo/config-plugins';
 import type { ConfigProps } from './@types';
 import { withBroadcastExtension } from './ios/withBroadcastExtension';
 import { withAndroidScreenRecording } from './android/withAndroidScreenRecording';
+import { validatePluginProps } from './support/validatePluginProps';
 
 const pkg = require('../../../package.json') as {
   name: string;
@@ -17,6 +18,8 @@ const CAMERA_USAGE = 'Allow $(PRODUCT_NAME) to access your camera';
 const MICROPHONE_USAGE = 'Allow $(PRODUCT_NAME) to access your microphone';
 
 const withScreenRecorder: ConfigPlugin<ConfigProps> = (config, props = {}) => {
+  validatePluginProps(props);
+
   /*---------------IOS-------------------- */
   if (config.ios == null) config.ios = {};
   if (config.ios.infoPlist == null) config.ios.infoPlist = {};

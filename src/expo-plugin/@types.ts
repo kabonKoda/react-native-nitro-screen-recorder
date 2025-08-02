@@ -49,16 +49,6 @@ export interface ConfigProps {
   disableExperimental?: boolean;
 
   /**
-   * App Group identifier used to share data between the main app and its extensions.
-   * This is required for sharing screen recording data across app boundaries on iOS.
-   *
-   * @platform iOS
-   * @default "group.${PRODUCT_BUNDLE_IDENTIFIER}.screenrecording"
-   * @example "group.com.mycompany.myapp.screenrecording"
-   */
-  iosAppGroupIdentifier?: string;
-
-  /**
    * Whether to display detailed plugin logs during the build process.
    * Useful for debugging configuration issues during development.
    *

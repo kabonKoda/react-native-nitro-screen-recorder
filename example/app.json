@@ -35,7 +35,6 @@
           "cameraPermissionText": "ScreenRecorder needs access to your Camera.",
           "enableMicrophonePermission": true,
           "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
-          "enableGlobalRecording": true,
           "showPluginLogs": true
       }
       ]

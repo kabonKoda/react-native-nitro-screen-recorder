@@ -63,9 +63,15 @@ extension NitroScreenRecorder {
       let mainAppBundleId = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier")
         as? String
     else {
+      print("❌ Could not get main app bundle identifier")
       return nil
     }
-    return "\(mainAppBundleId).broadcast-extension"
+    
+    let extensionBundleId = "\(mainAppBundleId).broadcast-extension"
+    print("🎯 Main App Bundle ID: \(mainAppBundleId)")
+    print("🎯 Expected Extension Bundle ID: \(extensionBundleId)")
+    
+    return extensionBundleId
   }
 
   private func getCurrentViewController() -> UIViewController? {
