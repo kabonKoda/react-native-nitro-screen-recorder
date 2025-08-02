@@ -1,4 +1,4 @@
-import { BE_TARGET_NAME } from '../support/iosConstants';
+import { BE_TARGET_NAME, getAppGroup } from '../support/iosConstants';
 import { ExpoConfig } from '@expo/config-types';
 
 export default function getEasManagedCredentialsConfigExtra(
@@ -18,12 +18,11 @@ export default function getEasManagedCredentialsConfigExtra(
               ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ??
                 []),
               {
-                // keep in sync with native changes in NSE
                 targetName: BE_TARGET_NAME,
                 bundleIdentifier: `${config?.ios?.bundleIdentifier}.${BE_TARGET_NAME}`,
                 entitlements: {
                   'com.apple.security.application-groups': [
-                    `group.${config?.ios?.bundleIdentifier}.screen-recorder`,
+                    getAppGroup(config?.ios?.bundleIdentifier!),
                   ],
                 },
               },

@@ -4,7 +4,6 @@ import { getAppGroup } from '../support/iosConstants';
 
 /**
  * Add "App Group" permission
- * @see https://documentation.onesignal.com/docs/react-native-sdk-setup#step-4-install-for-ios-using-cocoapods-for-ios-apps (step 4.4)
  */
 export const withMainAppAppGroupEntitlement: ConfigPlugin<ConfigProps> = (
   config
@@ -16,9 +15,12 @@ export const withMainAppAppGroupEntitlement: ConfigPlugin<ConfigProps> = (
     }
     const modResultsArray = newConfig.modResults[APP_GROUP_KEY] as Array<any>;
     const entitlement = getAppGroup(newConfig?.ios?.bundleIdentifier!);
+    console.log('hit with', entitlement);
     if (modResultsArray.indexOf(entitlement) !== -1) {
+      console.log('found');
       return newConfig;
     }
+    console.log('pushing');
     modResultsArray.push(entitlement);
     return newConfig;
   });
