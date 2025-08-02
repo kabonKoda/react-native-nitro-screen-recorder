@@ -1,4 +1,8 @@
 # Changelog
+## [0.1.9] - 2025-08-02
+### Fix
+- Rewrite of app group entitlements file, wasn't applying correctly
+
 ## [0.1.8] - 2025-08-02
 ### Fix
 - Complete rewrite of config plugin to make files link properly on ios
