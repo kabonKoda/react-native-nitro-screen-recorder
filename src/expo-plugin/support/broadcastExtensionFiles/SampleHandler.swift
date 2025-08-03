@@ -9,14 +9,14 @@ func finishBroadcastGracefully(_ handler: RPBroadcastSampleHandler)
 /*
  Handles the main processing of the global broadcast.
  The app-group identifier is fetched from the extension's Info.plist
- ("AppGroupIdentifier" key) so you don't have to hard-code it here.
+ ("BroadcastExtensionAppGroupIdentifier" key) so you don't have to hard-code it here.
  */
 final class SampleHandler: RPBroadcastSampleHandler {
 
   // MARK: – Properties
 
   private func appGroupIDFromPlist() -> String? {
-    guard let value = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String,
+    guard let value = Bundle.main.object(forInfoDictionaryKey: "BroadcastExtensionAppGroupIdentifier") as? String,
       !value.isEmpty
     else {
       return nil

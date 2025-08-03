@@ -47,7 +47,7 @@ extension NitroScreenRecorder {
 
   func getAppGroupIdentifier() throws -> String {
     let appGroupIdentifier: String? =
-      Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
+      Bundle.main.object(forInfoDictionaryKey: "BroadcastExtensionAppGroupIdentifier") as? String
 
     guard let appGroupIdentifier = appGroupIdentifier else {
       throw RecorderError.error(

@@ -41,7 +41,7 @@
       <string>RPBroadcastProcessModeSampleBuffer</string>
     </dict>
 
-    <key>AppGroupIdentifier</key>
+    <key>BroadcastExtensionAppGroupIdentifier</key>
     <string>{{GROUP_IDENTIFIER}}</string>
   </dict>
 </plist>
