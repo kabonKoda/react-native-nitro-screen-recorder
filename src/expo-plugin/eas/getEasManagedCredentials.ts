@@ -1,9 +1,16 @@
+import { ConfigProps } from '../@types';
 import { BE_TARGET_NAME, getAppGroup } from '../support/iosConstants';
 import { ExpoConfig } from '@expo/config-types';
+import assert from 'assert';
 
 export default function getEasManagedCredentialsConfigExtra(
-  config: ExpoConfig
+  config: ExpoConfig,
+  props: ConfigProps
 ): { [k: string]: any } {
+  assert(
+    config.ios?.bundleIdentifier,
+    "Missing 'ios.bundleIdentifier' in app config"
+  );
   return {
     ...config.extra,
     eas: {
@@ -22,7 +29,7 @@ export default function getEasManagedCredentialsConfigExtra(
                 bundleIdentifier: `${config?.ios?.bundleIdentifier}.${BE_TARGET_NAME}`,
                 entitlements: {
                   'com.apple.security.application-groups': [
-                    getAppGroup(config?.ios?.bundleIdentifier!),
+                    getAppGroup(config?.ios?.bundleIdentifier!, props),
                   ],
                 },
               },

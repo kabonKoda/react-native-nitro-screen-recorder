@@ -73,7 +73,6 @@ export const withMainAppEntitlementsFile: ConfigPlugin<ConfigProps> = (
         if (group && group.children) {
           // Check if this group contains typical main app files
           const hasMainAppFiles = group.children.some((childKey: string) => {
-            const files = xcodeProject.hash.project.objects.PBXFileReference;
             const file = files[childKey];
             return (
               file &&
@@ -107,7 +106,7 @@ export const withMainAppEntitlementsFile: ConfigPlugin<ConfigProps> = (
       const fileRef = xcodeProject.addFile(entitlementsPath, mainAppGroupKey, {
         lastKnownFileType: 'text.plist.entitlements',
         defaultEncoding: 4,
-        target: undefined, // Don't add to any target, it's just a project file
+        target: undefined,
       });
 
       if (fileRef) {

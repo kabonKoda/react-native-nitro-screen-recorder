@@ -1,3 +1,5 @@
+import { ConfigProps } from '../@types';
+
 export const IPHONEOS_DEPLOYMENT_TARGET = '11.0';
 export const TARGETED_DEVICE_FAMILY = `"1,2"`;
 
@@ -46,7 +48,8 @@ export const BE_TARGET_NAME = BROADCAST_EXT_TARGET_NAME;
 export const BE_SOURCE_FILE = 'SampleHandler.swift'; // Updated from NotificationService.m
 export const BE_EXT_FILES = BROADCAST_EXT_ALL_FILES;
 
-export const getAppGroup = (mainAppBundleId: string) => {
+export const getAppGroup = (mainAppBundleId: string, props: ConfigProps) => {
+  if (props.iosAppGroupIdentifier) return props.iosAppGroupIdentifier;
   return `group.${mainAppBundleId}.screen-recorder`;
 };
 

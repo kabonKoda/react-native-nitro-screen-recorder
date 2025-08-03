@@ -47,7 +47,10 @@ export interface ConfigProps {
    * @example true
    */
   disableExperimental?: boolean;
-
+  /**
+   * Provies a means for customizing your app group identifier.
+   */
+  iosAppGroupIdentifier?: string;
   /**
    * Whether to display detailed plugin logs during the build process.
    * Useful for debugging configuration issues during development.

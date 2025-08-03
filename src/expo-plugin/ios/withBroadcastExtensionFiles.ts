@@ -12,6 +12,7 @@ import {
 import { FileManager } from '../support/FileManager';
 import BEUpdaterManager from '../support/BEUpdateManager';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
+import { ConfigProps } from '../@types';
 
 const SAMPLE_HANDLER_FILE = 'SampleHandler.swift';
 /**
@@ -19,9 +20,9 @@ const SAMPLE_HANDLER_FILE = 'SampleHandler.swift';
  * project and patches them so their App Group + bundle versions match the
  * host app. Mirrors OneSignal's NSE flow for consistency.
  */
-export const withBroadcastExtensionFiles: ConfigPlugin = (
+export const withBroadcastExtensionFiles: ConfigPlugin<ConfigProps> = (
   config,
-  props: any = {}
+  props
 ) => {
   return withDangerousMod(config, [
     'ios',
@@ -44,9 +45,7 @@ export const withBroadcastExtensionFiles: ConfigPlugin = (
         await FileManager.copyFile(`${sourceDir}/${extFile}`, targetFile);
       }
 
-      // Allow a custom SampleHandler.swift path via plugin props
-      const sourceSamplePath =
-        props.iosBroadcastExtFilePath ?? `${sourceDir}/${SAMPLE_HANDLER_FILE}`;
+      const sourceSamplePath = `${sourceDir}/${SAMPLE_HANDLER_FILE}`;
       const targetSamplePath = `${iosPath}/${BROADCAST_EXT_TARGET_NAME}/${SAMPLE_HANDLER_FILE}`;
       await FileManager.copyFile(sourceSamplePath, targetSamplePath);
 
@@ -61,7 +60,7 @@ export const withBroadcastExtensionFiles: ConfigPlugin = (
       if (!mainAppBundleId) {
         throw new Error('Failed to find main app bundle id!');
       }
-      const groupIdentifier = getAppGroup(mainAppBundleId);
+      const groupIdentifier = getAppGroup(mainAppBundleId, props);
 
       await updater.updateEntitlements(groupIdentifier);
       await updater.updateInfoPlist(
