@@ -1,67 +1,80 @@
-name: 🐛 Bug report
-description: Report a reproducible bug or regression in this library.
-labels: [bug]
+name: 🐛 Bug Report
+description: File a bug report for react-native-nitro-screen-recorder
+title: "🐛 "
+labels: [🐛 bug]
 body:
-  - type: markdown
+  - type: textarea
     attributes:
-      value: |
-        # Bug report
-
-        👋 Hi!
-
-        **Please fill the following carefully before opening a new issue ❗**
-        *(Your issue may be closed if it doesn't provide the required pieces of information)*
+      label: What's happening?
+      description: Explain what you are trying to do, what you expected to happen, and what actually happened. Include any error messages, symptoms, and how the issue manifests. The more detail the better.
+      placeholder: I started a global recording, but when I call stopGlobalRecording the file is undefined and no error is thrown.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Environment
+      description: Provide relevant environment info: package version, React Native version, Expo SDK (if used), OS version, device model, etc.
+      placeholder: |
+        react-native-nitro-screen-recorder v0.3.2
+        React Native 0.76.9
+        Expo SDK 53 (if applicable)
+        iOS 17.4.1 on iPhone 14 Pro
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: What platform(s) does this affect?
+      options:
+        - iOS
+        - Android
+        - Both
+        - Other
+      description: Select the platform(s) where the bug occurs.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      description: Provide the exact steps needed to reproduce the bug. Include configuration, permission state, and any relevant setup.
+      placeholder: |
+        1. Start global recording with startGlobalRecording({ enableMic: true })
+        2. Wait 5 seconds
+        3. Call stopGlobalRecording({ settledTimeMs: 500 })
+        4. Observe that the returned file is undefined
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproducible Code
+      description: >
+        Paste a minimal code example that reliably reproduces the issue, including hook usage or API calls. No need for backticks; it will be formatted automatically.
+      render: tsx
+      placeholder: |
+        const { isRecording } = useGlobalRecording({
+          onRecordingFinished: (file) => {
+            console.log('got file', file);
+          },
+        });
+        startGlobalRecording({ enableMic: true });
+        // ...
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Relevant logs
+      description: Paste logs (Console.app, Android logcat, or JavaScript) that relate to the issue. Trim unrelated noise if possible.
+      placeholder: |
+        2025-08-04 04:34:58.521... Error: DMErr=-69642 ... stopped unexpectedly.
+    validations:
+      required: false
   - type: checkboxes
     attributes:
-      label: Before submitting a new issue
-      description: Please perform simple checks first.
+      label: Additional information
+      description: Please check all the boxes that apply
       options:
-        - label: I tested using the latest version of the library, as the bug might be already fixed.
+        - label: I am using Expo with the config plugin
+        - label: I am using the bare workflow (manual native setup)
+        - label: I have followed the [Troubleshooting Guide](https://github.com/margelo/react-native-nitro-screen-recorder/blob/main/docs/troubleshooting.md)
+        - label: I agree to follow this project's [Code of Conduct](https://github.com/margelo/react-native-nitro-screen-recorder/blob/main/CODE_OF_CONDUCT.md)
+        - label: I searched for similar issues and found none
           required: true
-        - label: I tested using a [supported version](https://github.com/reactwg/react-native-releases/blob/main/docs/support.md) of react native.
-          required: true
-        - label: I checked for possible duplicate issues, with possible answers.
-          required: true
-  - type: textarea
-    id: summary
-    attributes:
-      label: Bug summary
-      description: |
-        Provide a clear and concise description of what the bug is.
-        If needed, you can also provide other samples: error messages / stack traces, screenshots, gifs, etc.
-    validations:
-      required: true
-  - type: input
-    id: library-version
-    attributes:
-      label: Library version
-      description: What version of the library are you using?
-      placeholder: "x.x.x"
-    validations:
-      required: true
-  - type: textarea
-    id: react-native-info
-    attributes:
-      label: Environment info
-      description: Run `react-native info` in your terminal and paste the results here.
-      render: shell
-    validations:
-      required: true
-  - type: textarea
-    id: steps-to-reproduce
-    attributes:
-      label: Steps to reproduce
-      description: |
-        You must provide a clear list of steps and code to reproduce the problem.
-      value: |
-        1. …
-        2. …
-    validations:
-      required: true
-  - type: input
-    id: reproducible-example
-    attributes:
-      label: Reproducible example repository 
-      description: Please provide a link to a repository on GitHub with a reproducible example.
-    validations:
-      required: true
