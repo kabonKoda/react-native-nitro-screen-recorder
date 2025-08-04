@@ -1,6 +1,7 @@
 import { ConfigPlugin, withInfoPlist } from '@expo/config-plugins';
 import { ConfigProps } from '../@types';
 import { getAppGroup } from '../support/iosConstants';
+import { getBroadcastExtensionBundleIdentifier } from '../support/iosConstants';
 import assert from 'assert';
 
 export const withMainAppAppGroupInfoPlist: ConfigPlugin<ConfigProps> = (
@@ -11,9 +12,14 @@ export const withMainAppAppGroupInfoPlist: ConfigPlugin<ConfigProps> = (
     const appIdentifier = modConfig.ios?.bundleIdentifier;
     assert(appIdentifier, "Missing 'ios.bundleIdentifier' in app config");
     const appGroup = getAppGroup(appIdentifier, props);
+    const broadcastExtensionBundleId = getBroadcastExtensionBundleIdentifier(
+      appIdentifier,
+      props
+    );
 
-    // Use a specific key to avoid conflicts
     modConfig.modResults.BroadcastExtensionAppGroupIdentifier = appGroup;
+    modConfig.modResults.BroadcastExtensionBundleIdentifier =
+      broadcastExtensionBundleId;
 
     return modConfig;
   });

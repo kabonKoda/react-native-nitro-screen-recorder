@@ -55,7 +55,10 @@ export const getAppGroup = (mainAppBundleId: string, props: ConfigProps) => {
 
 // Helper function to get broadcast extension bundle identifier
 export function getBroadcastExtensionBundleIdentifier(
-  mainAppBundleId: string
+  mainAppBundleId: string,
+  props: ConfigProps
 ): string {
-  return `${mainAppBundleId}.broadcast-extension`;
+  if (props.iosExtensionBundleIdentifier)
+    return props.iosExtensionBundleIdentifier;
+  return `${mainAppBundleId}.${BE_TARGET_NAME}`;
 }

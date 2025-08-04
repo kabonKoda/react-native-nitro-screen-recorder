@@ -52,6 +52,10 @@ export interface ConfigProps {
    */
   iosAppGroupIdentifier?: string;
   /**
+   * Provies a means for customizing the ios broadcast extension bundle identifier.
+   */
+  iosExtensionBundleIdentifier?: string;
+  /**
    * Whether to display detailed plugin logs during the build process.
    * Useful for debugging configuration issues during development.
    *

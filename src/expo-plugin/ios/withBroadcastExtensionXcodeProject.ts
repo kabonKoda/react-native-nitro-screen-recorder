@@ -51,7 +51,8 @@ function getMainAppDevelopmentTeam(
 // Main Expo config-plugin
 //───────────────────────────────────────────────────────────────────────────
 export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
-  config
+  config,
+  props
 ) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults;
@@ -59,8 +60,10 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
     const appIdentifier = newConfig.ios?.bundleIdentifier;
     assert(appIdentifier, "Missing 'ios.bundleIdentifier' in app config");
 
-    const bundleIdentifier =
-      getBroadcastExtensionBundleIdentifier(appIdentifier);
+    const bundleIdentifier = getBroadcastExtensionBundleIdentifier(
+      appIdentifier,
+      props
+    );
 
     /* ------------------------------------------------------------------ */
     /* 0. Resolve DEVELOPMENT_TEAM (props override > auto-detect > none)  */

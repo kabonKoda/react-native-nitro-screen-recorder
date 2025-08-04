@@ -58,17 +58,20 @@ extension NitroScreenRecorder {
     return appGroupIdentifier
   }
 
-  func getBroadcastExtensionBundleId() -> String? {
-    guard
-      let mainAppBundleId = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier")
-        as? String
-    else {
-      print("❌ Could not get main app bundle identifier")
-      return nil
-    }
-
-    return "\(mainAppBundleId).broadcast-extension"
+func getBroadcastExtensionBundleId() -> String? {
+  // First try to get the custom bundle identifier from Info.plist
+  if let customBundleId = Bundle.main.object(forInfoDictionaryKey: "BroadcastExtensionBundleIdentifier") as? String {
+    return customBundleId
   }
+  
+  // Fallback to the default pattern
+  guard let mainAppBundleId = Bundle.main.object(forInfoDictionaryKey: "CFBundleIdentifier") as? String else {
+    print("❌ Could not get main app bundle identifier")
+    return nil
+  }
+  
+  return "\(mainAppBundleId).BroadcastExtension"
+}
 
   private func getCurrentViewController() -> UIViewController? {
     guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
