@@ -1,5 +1,5 @@
 # Changelog
-## [0.2.6] - 2025-08-02
+## [0.2.7] - 2025-08-02
 ### Feat
 - Rewrite `useGlobalRecording` hook
 - Add adjustable `settledTimeMs` to `stopGlobalRecording` function
