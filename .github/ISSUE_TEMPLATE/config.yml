@@ -1,11 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Bug Report 🐛
-    url: https://github.com/ChristopherGabba/react-native-nitro-screen-recorder/issues/new?template=BUG_REPORT.yml
-    about: Found a bug? File it using the prefilled bug report template.
-  - name: Feature Request 💡
-    url: https://github.com/ChristopherGabba/react-native-nitro-screen-recorder/issues/new?template=FEATURE_REQUEST.yml
-    about: Suggest a new feature or enhancement using the structured feature request template.
   - name: Discussions on GitHub 💬
     url: https://github.com/ChristopherGabba/react-native-nitro-screen-recorder/discussions
     about: If this library works as promised but you need help, please ask questions there.
