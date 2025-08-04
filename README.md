@@ -251,6 +251,8 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
 -   Test thoroughly on physical devices as screen recording doesn't work in simulators
 -   Make sure your app has a custom URL scheme configured for deep linking
 
+</details>
+
 ## Verification
 
 After completing these steps:
