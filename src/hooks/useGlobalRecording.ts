@@ -1,218 +1,120 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
-import { ScreenRecordingFile } from '../types';
+import { useState, useEffect } from 'react';
 import {
-  retrieveLastGlobalRecording,
   addScreenRecordingListener,
+  retrieveLastGlobalRecording,
 } from '../functions';
+import { ScreenRecordingFile } from '../types';
 
 /**
- * Options for {@link useGlobalRecording}.
+ * A "modern" sleep statement.
  *
- * **When to enable `refetchOnAppForeground`:**
- * - Turn this on if users might stop a global recording while your app is backgrounded.
- * - With it enabled, the hook will refresh as soon as your app becomes active again,
- *   which avoids extra disk work while backgrounded and yields fresher results on return.
+ * @param ms The number of milliseconds to wait.
  */
-export interface GlobalRecordingHookInput {
-  /** Refresh on `AppState` transition to `"active"`. */
-  refetchOnAppForeground: boolean;
-}
+const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve as () => void, ms));
 
 /**
- * Result returned by {@link useGlobalRecording}.
- *
- * **Recommended UI pattern:**
- * - Show a lightweight “Processing…” or spinner while `isLoading` is `true` after a recording ends.
- * - When `recording` becomes defined, proceed to upload, share, or preview.
- * - If `isError` is `true`, show a retry affordance wired to `refetch()`.
+ * Configuration options for the global recording hook.
  */
-export interface GlobalRecordingHookOutput {
-  /** The most recent completed global recording, or `undefined` if none is available. */
-  recording: ScreenRecordingFile | undefined;
-  /** `true` while the hook is actively resolving the latest recording. */
-  isLoading: boolean;
-  /** `true` if the most recent attempt to resolve the latest recording failed. */
-  isError: boolean;
-  /** The error from the most recent failure, if any. */
-  error: Error | null;
+type GlobalRecordingHookInput = {
   /**
-   * Immediately re-check for the latest global recording (skips the settle delay).
-   * Useful for user‑initiated refresh (pull‑to‑refresh, “Try again” button).
+   * Callback invoked when a global screen recording begins.
+   * Use this to update your UI to indicate recording is in progress.
    */
-  refetch: () => void;
-}
+  onRecordingStarted?: () => void;
+  /**
+   * Callback invoked when a global screen recording finishes.
+   * Receives the recorded file (if successfully retrieved) or undefined if retrieval failed.
+   *
+   * @param file The screen recording file, or undefined if retrieval failed
+   */
+  onRecordingFinished?: (file?: ScreenRecordingFile) => void;
+  /**
+   * Time in milliseconds to wait after recording ends before attempting to retrieve the file.
+   * This allows the system time to finish writing the recording to disk.
+   *
+   * @default 500
+   */
+  settledTimeMs?: number;
+};
 
 /**
- * Compare two `ScreenRecordingFile` descriptors to avoid redundant state updates.
- * Assumes filename + duration uniquely identify the finalized output in your pipeline.
+ * Return value from the global recording hook.
  */
-function isSameRecording(
-  current: ScreenRecordingFile | undefined,
-  latest: ScreenRecordingFile | null
-): boolean {
-  if (!current || !latest) return false;
-  return current.name === latest.name && current.duration === latest.duration;
-}
+type GlobalRecordingHookOutput = {
+  /**
+   * Whether a global screen recording is currently active.
+   * Updates automatically as recordings start and stop.
+   */
+  isRecording: boolean;
+};
 
 /**
- * Promise-based delay helper.
- */
-async function delay(ms: number): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Subscribe to global recording lifecycle and expose the most recent finished file.
+ * React hook for monitoring and responding to global screen recording events.
  *
- * ### What this hook does
- * - Listens to your package's global recording events (`began` → `ended`).
- * - On `ended`, waits ~1.5s so the extension/asset writer can finish closing the file,
- *   then resolves the latest recording via `retrieveLastGlobalRecording()`.
- * - Optionally fetches the file when the app returns to the foreground.
+ * This hook automatically tracks the state of global screen recordings (recordings
+ * that capture the entire device screen, not just your app) and provides callbacks
+ * for when recordings start and finish. It also manages the timing of file retrieval
+ * to ensure the recording file is fully written before attempting to access it.
  *
+ * **Key Features:**
+ * - Automatically tracks global recording state
+ * - Provides lifecycle callbacks for recording start/finish events
+ * - Handles timing delays for safe file retrieval
+ * - Filters out within-app recordings (only responds to global recordings)
  *
+ * **Use Cases:**
+ * - Show recording indicators in your UI
+ * - Automatically upload or process completed recordings
+ * - Trigger analytics events for recording usage
+ * - Update app state based on recording activity
  *
- * @param input Hook options. See {@link GlobalRecordingHookInput}.
- * @returns See {@link GlobalRecordingHookOutput}.
+ * @param props Configuration options for the hook
+ * @returns Object containing the current recording state
  *
  * @example
- * ```ts
- * const { recording, isLoading, isError, error, refetch } =
- *   useGlobalRecording({ refetchOnAppForeground: true });
- *
- * useEffect(() => {
- *   if (recording) {
- *     // e.g., uploadRecording(recording.path)
- *   }
- * }, [recording]);
+ * ```tsx
+ *   const { isRecording } = useGlobalRecording({
+ *     onRecordingStarted: () => {
+ *       analytics.track('recording_started');
+ *     },
+ *     onRecordingFinished: async (file) => {
+ *       if (file) {
+ *         try {
+ *           await uploadRecording(file);
+ *           showSuccessToast('Recording uploaded successfully!');
+ *         } catch (error) {
+ *           showErrorToast('Failed to upload recording');
+ *         }
+ *       }
+ *     },
+ *   });
  * ```
  */
 export const useGlobalRecording = (
-  input?: GlobalRecordingHookInput
+  props?: GlobalRecordingHookInput
 ): GlobalRecordingHookOutput => {
-  const [recording, setRecording] = useState<ScreenRecordingFile | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const appState = useRef(AppState.currentState);
-  const recordingInProgressRef = useRef(false);
-
-  const clearError = useCallback(() => {
-    setIsError(false);
-    setError(null);
-  }, []);
-
-  const fetchLatestRecording = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      clearError();
-      await delay(1500);
-      const latest = retrieveLastGlobalRecording();
-
-      if (latest) {
-        if (isSameRecording(recording, latest)) return;
-        setRecording(latest);
-      } else {
-        setRecording(undefined);
-      }
-    } catch (err) {
-      const errorObj =
-        err instanceof Error
-          ? err
-          : new Error('Failed to fetch global recording');
-      setError(errorObj);
-      setIsError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [clearError, recording]);
-
-  const refetch = useCallback(() => {
-    try {
-      clearError();
-      const latest = retrieveLastGlobalRecording();
-
-      if (latest) {
-        if (isSameRecording(recording, latest)) return;
-        setRecording(latest);
-      } else {
-        setRecording(undefined);
-      }
-    } catch (err) {
-      const errorObj =
-        err instanceof Error
-          ? err
-          : new Error('Failed to fetch global recording');
-      setError(errorObj);
-      setIsError(true);
-    }
-  }, [clearError, recording]);
+  const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener(
-      'change',
-      (nextAppState: AppStateStatus) => {
-        if (
-          appState.current.match(/inactive|background/) &&
-          nextAppState === 'active' &&
-          input?.refetchOnAppForeground
-        ) {
-          refetch();
-        }
-        appState.current = nextAppState;
-      }
-    );
+    const unsubscribe = addScreenRecordingListener(async (event) => {
+      if (event.type === 'withinApp') return;
 
-    return () => {
-      subscription?.remove();
-    };
-  }, [refetch, input?.refetchOnAppForeground, isLoading]);
-
-  useEffect(() => {
-    const unsubscribe = addScreenRecordingListener((event) => {
-      if (event.type === 'global' && event.reason === 'began') {
-        recordingInProgressRef.current = true;
-      }
-
-      const shouldLetAppFocusHandlerRefetch =
-        appState.current.match(/inactive|background/) &&
-        input?.refetchOnAppForeground;
-
-      if (
-        event.type === 'global' &&
-        event.reason === 'ended' &&
-        recordingInProgressRef.current &&
-        !shouldLetAppFocusHandlerRefetch
-      ) {
-        recordingInProgressRef.current = false;
-
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-
-        timeoutRef.current = setTimeout(() => {
-          fetchLatestRecording();
-        }, 100);
+      if (event.reason === 'began') {
+        setIsRecording(true);
+        props?.onRecordingStarted?.();
+      } else {
+        setIsRecording(false);
+        // We add a small delay after the recording ends to allow the file to finish writing
+        // to disk before trying to fetch it
+        delay(props?.settledTimeMs ?? 500);
+        const file = retrieveLastGlobalRecording();
+        props?.onRecordingFinished?.(file);
       }
     });
 
-    return () => {
-      unsubscribe();
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [fetchLatestRecording, input?.refetchOnAppForeground]);
+    return unsubscribe;
+  }, [props]);
 
-  return {
-    recording,
-    isLoading,
-    isError,
-    error,
-    refetch,
-  };
+  return { isRecording };
 };

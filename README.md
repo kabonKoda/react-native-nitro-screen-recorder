@@ -213,7 +213,7 @@ import android.util.Log;
 public void onActivityResult(int requestCode, int resultCode, Intent data) {
   super.onActivityResult(requestCode, resultCode, data);
   Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
-  
+
   try {
     NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
   } catch (Exception e) {
@@ -233,7 +233,7 @@ import android.util.Log
 override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
   super.onActivityResult(requestCode, resultCode, data)
   Log.d("MainActivity", "onActivityResult: requestCode=$requestCode, resultCode=$resultCode")
-  
+
   try {
     NitroScreenRecorder.handleActivityResult(requestCode, resultCode, data);
   } catch (e: Exception) {
@@ -242,8 +242,6 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
   }
 }
 ```
-
-</details>
 
 ## Important Notes
 
@@ -262,36 +260,40 @@ After completing these steps:
 3.  Verify that recorded files are properly saved and accessible
 4.  Check that permissions are properly requested when needed
 
-Your bare React Native project should now have the same screen recording capabilities as an Expo project using the config plugin.
-
 ### Quick Start Example
 
-Here's a complete example using the `useGlobalRecording` hook:
+Here's a complete example using the **new** `useGlobalRecording` hook and updated `stopGlobalRecording`:
 
 ```tsx
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, Button, Alert } from 'react-native';
-import { 
-  useGlobalRecording, 
+import {
+  useGlobalRecording,
   useMicrophonePermission,
   startGlobalRecording,
-  stopGlobalRecording 
+  stopGlobalRecording,
 } from 'react-native-nitro-screen-recorder';
 
 export default function ScreenRecorderExample() {
   const { hasPermission, requestPermission } = useMicrophonePermission();
-  const { recording, isLoading, isError, error, refetch } = useGlobalRecording({
-    refetchOnAppForeground: true
-  });
 
-  useEffect(() => {
-    if (recording) {
-      Alert.alert(
-        'Recording Complete!', 
-        `Saved: ${recording.name}\nDuration: ${recording.duration}s\nSize: ${recording.size} bytes`
-      );
-    }
-  }, [recording]);
+  const { isRecording } = useGlobalRecording({
+    onRecordingStarted: () => {
+      Alert.alert('Recording started');
+    },
+    onRecordingFinished: async (file) => {
+      if (file) {
+        Alert.alert(
+          'Recording Complete!',
+          `Saved: ${file.name}\nDuration: ${file.duration}s\nSize: ${file.size} bytes`
+        );
+        // e.g., uploadRecording(file.path)
+      } else {
+        Alert.alert('Recording Complete', 'Failed to retrieve the file.');
+      }
+    },
+    settledTimeMs: 700, // optional delay before retrieving the file
+  });
 
   const handleStartRecording = async () => {
     if (!hasPermission) {
@@ -301,14 +303,20 @@ export default function ScreenRecorderExample() {
         return;
       }
     }
-    
-    // Example usage with a dummy error callback
+
     startGlobalRecording({
-      options: { enableMic: true },
+      enableMic: true,
       onRecordingError: (error) => {
-        Alert.alert('Recording Error', `Failed to start recording: ${error.message}`);
-      }
+        Alert.alert('Global recording error', error.message);
+      },
     });
+  };
+
+  const handleStopRecording = async () => {
+    const file = await stopGlobalRecording({ settledTimeMs: 1000 });
+    if (file) {
+      console.log('Stopped and retrieved file:', file);
+    }
   };
 
   return (
@@ -316,26 +324,11 @@ export default function ScreenRecorderExample() {
       <Text style={{ fontSize: 18, marginBottom: 20, textAlign: 'center' }}>
         Screen Recorder Demo
       </Text>
-      
+
       <Button title="Start Global Recording" onPress={handleStartRecording} />
-      <Button title="Stop Recording" onPress={stopGlobalRecording} />
-      
-      {isLoading && <Text>Processing recording...</Text>}
-      {isError && (
-        <View>
-          <Text>Error: {error?.message}</Text>
-          <Button title="Retry" onPress={refetch} />
-        </View>
-      )}
-      
-      {recording && (
-        <View style={{ marginTop: 20 }}>
-          <Text>Latest Recording:</Text>
-          <Text>Name: {recording.name}</Text>
-          <Text>Duration: {recording.duration}s</Text>
-          <Text>Size: {recording.size} bytes</Text>
-        </View>
-      )}
+      <Button title="Stop Recording" onPress={handleStopRecording} />
+
+      {isRecording && <Text style={{ marginTop: 10 }}>Recording is active…</Text>}
     </View>
   );
 }
@@ -348,7 +341,7 @@ export default function ScreenRecorderExample() {
 -   [React Hooks](#react-hooks)
     -   [`useCameraPermission()`](#usecamerapermission-permissionstate)
     -   [`useMicrophonePermission()`](#usemicrophonepermission-permissionstate)
-    -   [`useGlobalRecording()`](#useglobalrecordinginput-globalrecordinghookoutput)
+    -   [`useGlobalRecording()`](#useglobalrecordinginput--globalrecordinghookoutput)
 -   [Permissions](#permissions)
     -   [`getCameraPermissionStatus()`](#getcamerapermissionstatus-permissionstatus)
     -   [`getMicrophonePermissionStatus()`](#getmicrophonepermissionstatus-permissionstatus)
@@ -364,7 +357,7 @@ export default function ScreenRecorderExample() {
     -   [`retrieveLastGlobalRecording()`](#retrievelastglobalrecording-screenrecordingfile--undefined)
 -   [Event Listeners](#event-listeners)
     -   [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener-number)
-    -   [`removeScreenRecordingListener()`](#removescreenrecordinglistenerid-void)
+    -   [`removeScreenRecordingListener(id): void`](#removescreenrecordinglistenerid-void)
 -   [Utilities](#utilities)
     -   [`clearRecordingCache()`](#clearrecordingcache-void)
 
@@ -415,45 +408,30 @@ const recordingOptions = {
 
 ### `useGlobalRecording(input): GlobalRecordingHookOutput`
 
-Subscribe to global recording lifecycle and expose the most recent finished file. Automatically handles the delay needed for file processing after recording ends.
+React hook for monitoring and responding to global screen recording events.
 
 **Platform:** iOS, Android
 
 **Parameters:**
--   `input.refetchOnAppForeground`: Refresh when app becomes active (useful if users stop recording while app is backgrounded)
+- `onRecordingStarted?: () => void` — Called when a global recording begins.
+- `onRecordingFinished?: (file?: ScreenRecordingFile) => void` — Called after recording ends (with a delay to allow the file to settle).
+- `settledTimeMs?: number` — Milliseconds to wait after recording end before attempting to retrieve the file. Defaults to 500.
 
-**Returns:** Object with recording file, loading state, error state, and refetch function
+**Returns:** `{ isRecording: boolean }` — whether a global recording is currently active.
 
 **Example:**
 ```tsx
 import { useGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-const { recording, isLoading, isError, error, refetch } = useGlobalRecording({
-  refetchOnAppForeground: true
+const { isRecording } = useGlobalRecording({
+  onRecordingStarted: () => console.log('started'),
+  onRecordingFinished: (file) => {
+    if (file) {
+      console.log('finished:', file.path);
+    }
+  },
+  settledTimeMs: 600,
 });
-
-useEffect(() => {
-  if (recording) {
-    // Handle completed recording
-    console.log('New recording:', recording.path);
-    // e.g., uploadRecording(recording.path)
-  }
-}, [recording]);
-
-// Show loading state
-if (isLoading) {
-  return <Text>Processing recording...</Text>;
-}
-
-// Show error state
-if (isError) {
-  return (
-    <View>
-      <Text>Error: {error?.message}</Text>
-      <Button title="Try Again" onPress={refetch} />
-    </View>
-  );
-}
 ```
 
 ## Permissions
@@ -467,7 +445,7 @@ Gets the current camera permission status without requesting permission.
 **Returns:** The current permission status for camera access
 
 **Example:**
-```typescript
+```ts
 import { getCameraPermissionStatus } from 'react-native-nitro-screen-recorder';
 
 const status = getCameraPermissionStatus();
@@ -485,7 +463,7 @@ Gets the current microphone permission status without requesting permission.
 **Returns:** The current permission status for microphone access
 
 **Example:**
-```typescript
+```ts
 import { getMicrophonePermissionStatus } from 'react-native-nitro-screen-recorder';
 
 const status = getMicrophonePermissionStatus();
@@ -503,7 +481,7 @@ Requests camera permission from the user if not already granted. Shows the syste
 **Returns:** Promise that resolves with the permission response
 
 **Example:**
-```typescript
+```ts
 import { requestCameraPermission } from 'react-native-nitro-screen-recorder';
 
 const response = await requestCameraPermission();
@@ -521,7 +499,7 @@ Requests microphone permission from the user if not already granted. Shows the s
 **Returns:** Promise that resolves with the permission response
 
 **Example:**
-```typescript
+```ts
 import { requestMicrophonePermission } from 'react-native-nitro-screen-recorder';
 
 const response = await requestMicrophonePermission();
@@ -546,7 +524,7 @@ Starts in-app screen recording with the specified configuration. Records only th
 -   `onRecordingFinished`: (file: ScreenRecordingFile) => void - Callback when recording completes
 
 **Example:**
-```typescript
+```ts
 import { startInAppRecording } from 'react-native-nitro-screen-recorder';
 
 await startInAppRecording(
@@ -569,7 +547,7 @@ Stops the current in-app recording and returns the recorded video file. The reco
 **Returns:** Promise that resolves with the recording file or undefined if no recording was active
 
 **Example:**
-```typescript
+```ts
 import { stopInAppRecording } from 'react-native-nitro-screen-recorder';
 
 const file = await stopInAppRecording();
@@ -585,7 +563,7 @@ Cancels the current in-app recording without saving the video. No file will be g
 **Platform:** iOS only
 
 **Example:**
-```typescript
+```ts
 import { cancelInAppRecording } from 'react-native-nitro-screen-recorder';
 
 await cancelInAppRecording(); // Recording discarded, no file saved
@@ -607,20 +585,18 @@ Starts global screen recording that captures the entire device screen. Records s
 -   `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
 
 **Example:**
-```typescript
+```ts
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
 startGlobalRecording(
   true, // enableMic
   (error) => {
     console.error('Global recording error:', error.message);
-    // Handle the error (e.g., show an alert to the user)
   }
 );
-// User can now navigate to other apps while recording continues
 ```
 
-### `stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>`
+### `stopGlobalRecording(options?): Promise<ScreenRecordingFile | undefined>`
 
 Stops the current global screen recording and returns the saved video file. Because the system may take a short moment to finalize the asset writer output, you can pass an optional delay before retrieval.
 
@@ -630,7 +606,7 @@ Stops the current global screen recording and returns the saved video file. Beca
 - `options.settledTimeMs?: number` — Milliseconds to wait after the broadcast ends before attempting to retrieve the file. Defaults to 500.
 
 **Example:**
-```typescript
+```ts
 import { stopGlobalRecording } from 'react-native-nitro-screen-recorder';
 
 const file = await stopGlobalRecording({ settledTimeMs: 1000 });
@@ -648,7 +624,7 @@ Retrieves the most recently completed global recording file. Returns undefined i
 **Returns:** The last global recording file or undefined if none exists
 
 **Example:**
-```typescript
+```ts
 import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
 
 const lastRecording = retrieveLastGlobalRecording();
@@ -672,7 +648,7 @@ Adds a listener for screen recording events (start, stop, error, etc.). Returns 
 **Returns:** Listener ID number for removing the listener
 
 **Example:**
-```typescript
+```ts
 import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
 
 const listenerId = addScreenRecordingListener((event) => {
@@ -690,7 +666,7 @@ Removes a previously added screen recording event listener.
 -   `id`: The listener ID returned from `addScreenRecordingListener`
 
 **Example:**
-```typescript
+```ts
 import { useEffect } from 'react';
 import { addScreenRecordingListener, removeScreenRecordingListener } from 'react-native-nitro-screen-recorder';
 
@@ -698,7 +674,7 @@ useEffect(() => {
   const listenerId = addScreenRecordingListener((event) => {
     console.log("Event type:", event.type, "Event reason:", event.reason);
   });
-  
+
   return () => removeScreenRecordingListener(listenerId);
 }, []);
 ```
@@ -712,7 +688,7 @@ Clears all cached recording files to free up storage space. This will delete tem
 **Platform:** iOS, Android
 
 **Example:**
-```typescript
+```ts
 import { clearRecordingCache } from 'react-native-nitro-screen-recorder';
 
 clearRecordingCache(); // Frees up storage by removing temporary recording files
@@ -722,7 +698,7 @@ clearRecordingCache(); // Frees up storage by removing temporary recording files
 
 The library exports comprehensive TypeScript types for all functionality:
 
-```typescript
+```ts
 // Permission types
 export type PermissionStatus = 'denied' | 'granted' | 'undetermined';
 
@@ -739,17 +715,15 @@ export interface PermissionState {
   requestPermission: () => Promise<boolean>;
 }
 
-export interface GlobalRecordingHookInput {
-  refetchOnAppForeground: boolean;
-}
+export type GlobalRecordingHookInput = {
+  onRecordingStarted?: () => void;
+  onRecordingFinished?: (file?: ScreenRecordingFile) => void;
+  settledTimeMs?: number;
+};
 
-export interface GlobalRecordingHookOutput {
-  recording: ScreenRecordingFile | undefined;
-  isLoading: boolean;
-  isError: boolean;
-  error: Error | null;
-  refetch: () => void;
-}
+export type GlobalRecordingHookOutput = {
+  isRecording: boolean;
+};
 
 // Recording configuration
 export type RecorderCameraStyle = {
