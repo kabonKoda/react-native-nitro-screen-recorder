@@ -13,7 +13,7 @@ body:
   - type: textarea
     attributes:
       label: Environment
-      description: Provide relevant environment info: package version, React Native version, Expo SDK (if used), OS version, device model, etc.
+      description: Provide relevant environment info - package version, React Native version, Expo SDK (if used), OS version, device model, etc.
       placeholder: |
         react-native-nitro-screen-recorder v0.3.2
         React Native 0.76.9
