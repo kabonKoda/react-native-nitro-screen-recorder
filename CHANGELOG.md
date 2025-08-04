@@ -1,4 +1,8 @@
 # Changelog
+## [0.2.8] - 2025-08-02
+### Feat
+- Allow custom iosBundleIdentifier for BroadcastExtension
+
 ## [0.2.7] - 2025-08-02
 ### Feat
 - Rewrite `useGlobalRecording` hook
