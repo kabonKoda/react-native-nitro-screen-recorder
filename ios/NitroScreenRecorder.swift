@@ -372,7 +372,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   // https://mehmetbaykar.com/posts/how-to-gracefully-stop-a-broadcast-upload-extension/
   // Basically you send a kill command through Darwin and you suppress
   // the system error
-  func stopGlobalRecording() throws -> Promise<ScreenRecordingFile?> {
+  func stopGlobalRecording(settledTimeMs: Double) throws -> Promise<ScreenRecordingFile?> {
     return Promise.async {
       guard self.isGlobalRecordingActive else {
         print("⚠️ stopGlobalRecording called but no active global recording.")
@@ -395,8 +395,9 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       // Reflect intent locally.
       self.isGlobalRecordingActive = false
 
-      // Small grace period for the broadcast to wind down.
-      try? await Task.sleep(nanoseconds: 500_000_000)
+      // Wait for the specified settle time to allow the broadcast to finish writing the file.
+      let settleTimeNanoseconds = UInt64(settledTimeMs * 1_000_000)  // Convert ms to nanoseconds
+      try? await Task.sleep(nanoseconds: settleTimeNanoseconds)
 
       do {
         return try self.retrieveLastGlobalRecording()

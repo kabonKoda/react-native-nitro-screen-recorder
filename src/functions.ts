@@ -230,18 +230,34 @@ export function startGlobalRecording(input: GlobalRecordingInput): void {
  * The recorded file can be retrieved using retrieveLastGlobalRecording().
  *
  * @platform Android/ios
+ * @param options.settledTimeMs A "delay" time to wait before the function
+ * tries to retrieve the file from the asset writer. It can take some time
+ * to finish completion and correclty return the file. Default = 500ms
  * @example
  * ```typescript
- * const file = await stopGlobalRecording();
+ * const file = await stopGlobalRecording({ settledTimeMs: 1000 });
  * if (file) {
  *   console.log('Global recording saved:', file.path);
  * }
  * ```
  */
-export async function stopGlobalRecording(): Promise<
-  ScreenRecordingFile | undefined
-> {
-  return NitroScreenRecorderHybridObject.stopGlobalRecording();
+export async function stopGlobalRecording(options?: {
+  settledTimeMs: number;
+}): Promise<ScreenRecordingFile | undefined> {
+  let settledTimeMs = 500;
+  if (options?.settledTimeMs) {
+    if (
+      typeof options.settledTimeMs !== 'number' ||
+      options.settledTimeMs <= 0
+    ) {
+      console.warn(
+        'Provided invalid value to `settledTimeMs` in `stopGlobalRecording` function, value will be ignored. Please use a value >0'
+      );
+    } else {
+      settledTimeMs = options.settledTimeMs;
+    }
+  }
+  return NitroScreenRecorderHybridObject.stopGlobalRecording(settledTimeMs);
 }
 
 /**

@@ -322,7 +322,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     }
   }
 
-  override fun stopGlobalRecording(): Promise<ScreenRecordingFile?> {
+  override fun stopGlobalRecording(settledTimeMs: Double): Promise<ScreenRecordingFile?> {
     return Promise.async {
       val ctx = NitroModules.applicationContext ?: return@async null
 
@@ -341,8 +341,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         isServiceBound = false
       }
 
-      // Add 0.5 second delay to ensure recording is properly finalized
-      delay(500)
+      delay(settledTimeMs)
 
       return@async retrieveLastGlobalRecording()
     }

@@ -622,17 +622,18 @@ startGlobalRecording(
 
 ### `stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>`
 
-Stops the current global screen recording and returns the saved video file. This function now works on both iOS and Android.
+Stops the current global screen recording and returns the saved video file. Because the system may take a short moment to finalize the asset writer output, you can pass an optional delay before retrieval.
 
 **Platform:** iOS, Android
 
-**Returns:** Promise that resolves with the recording file or undefined if no recording was active
+**Parameters:**
+- `options.settledTimeMs?: number` — Milliseconds to wait after the broadcast ends before attempting to retrieve the file. Defaults to 500.
 
 **Example:**
 ```typescript
 import { stopGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-const file = await stopGlobalRecording();
+const file = await stopGlobalRecording({ settledTimeMs: 1000 });
 if (file) {
   console.log('Global recording saved:', file.path);
 }

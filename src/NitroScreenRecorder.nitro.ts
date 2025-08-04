@@ -62,7 +62,9 @@ export interface NitroScreenRecorder
     enableMic: boolean,
     onRecordingError: (error: RecordingError) => void
   ): void;
-  stopGlobalRecording(): Promise<ScreenRecordingFile | undefined>;
+  stopGlobalRecording(
+    settledTimeMs: number
+  ): Promise<ScreenRecordingFile | undefined>;
   retrieveLastGlobalRecording(): ScreenRecordingFile | undefined;
 
   // ============================================================================
