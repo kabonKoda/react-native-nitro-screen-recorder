@@ -1,5 +1,15 @@
 # Changelog
-## [0.1.9] - 2025-08-02
+## [0.2.6] - 2025-08-02
+### Feat
+- Rewrite `useGlobalRecording` hook
+- Add adjustable `settledTimeMs` to `stopGlobalRecording` function
+
+### Chore
+- Update README.md
+- Bump react-native-nitro-modules to 0.27.3
+- Update keywords on package.json
+
+## [0.1.9] - [0.2.5] - 2025-08-02
 ### Fix
 - Rewrite of app group entitlements file, wasn't applying correctly to the main app
 
