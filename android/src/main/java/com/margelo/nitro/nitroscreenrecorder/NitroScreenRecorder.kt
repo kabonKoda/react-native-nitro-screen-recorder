@@ -341,7 +341,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         isServiceBound = false
       }
 
-      delay(settledTimeMs)
+      delay(settledTimeMs.toLong())
 
       return@async retrieveLastGlobalRecording()
     }
