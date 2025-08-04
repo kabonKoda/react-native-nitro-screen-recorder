@@ -22,7 +22,6 @@
     ],
     "ios": {
       "bundleIdentifier": "nitroscreenrecorderexample.example",
-      "appleTeamId": "32U9AXHQSK"
     },
     "android": {
       "package": "nitroscreenrecorderexample.example"
