@@ -78,7 +78,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
 
     appStateObservers = [willEnterForegroundObserver, didBecomeActiveObserver]
-    print("🎯 App state observers set up")
   }
 
   private func removeAppStateObservers() {
@@ -86,17 +85,13 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       NotificationCenter.default.removeObserver(observer)
     }
     appStateObservers.removeAll()
-    print("🎯 App state observers removed")
   }
 
   private func handleAppWillEnterForeground() {
-    print("🎯 App will enter foreground - broadcast modal showing: \(isBroadcastModalShowing)")
 
     if isBroadcastModalShowing {
       // The modal was showing and now we're coming back to foreground
       // This likely means the user dismissed the modal or started/cancelled broadcasting
-      print("🎯 Broadcast modal was showing, app returning to foreground - modal likely dismissed")
-
       // Small delay to ensure any system UI transitions are complete
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
         self?.handleBroadcastModalDismissed()
@@ -105,8 +100,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   }
 
   private func handleAppDidBecomeActive() {
-    print("🎯 App did become active - broadcast modal showing: \(isBroadcastModalShowing)")
-
     // Additional check when app becomes fully active
     if isBroadcastModalShowing {
       // Double-check that we're actually back and the modal is gone
@@ -133,7 +126,6 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
         // If we thought the modal was showing but there's no modal, it was dismissed
         if !hasModal && self.isBroadcastModalShowing {
-          print("🎯 Confirmed: No modal present, broadcast picker was dismissed")
           self.handleBroadcastModalDismissed()
         }
       }
@@ -142,13 +134,10 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   private func handleBroadcastModalDismissed() {
     guard isBroadcastModalShowing else { return }
-
-    print("🎯 Handling broadcast modal dismissal")
     isBroadcastModalShowing = false
 
     // Notify all listeners that the modal was dismissed
     broadcastPickerEventListeners.forEach { $0.callback(.dismissed) }
-    print("🎯 Notified \(broadcastPickerEventListeners.count) listeners of dismissal")
   }
 
   @objc private func handleScreenRecordingChange() {
@@ -521,151 +510,88 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   }
 
   func retrieveLastGlobalRecording() throws -> ScreenRecordingFile? {
-    print("🎬 retrieveLastGlobalRecording: Starting function")
-
-    // 1) Resolve app group doc dir
-    print("📁 Attempting to get app group identifier...")
-    guard let appGroupId = try? getAppGroupIdentifier() else {
-      print("❌ Failed to get app group identifier")
-      throw RecorderError.error(
-        name: "APP_GROUP_ACCESS_FAILED",
-        message: "Could not get app group identifier"
-      )
-    }
-    print("✅ App group ID: \(appGroupId)")
-
-    guard
+    // Resolve app group documents directory
+    guard let appGroupId = try? getAppGroupIdentifier(),
       let docsURL = FileManager.default
         .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
         .appendingPathComponent("Library/Documents/", isDirectory: true)
     else {
-      print("❌ Failed to access app group container for ID: \(appGroupId)")
       throw RecorderError.error(
         name: "APP_GROUP_ACCESS_FAILED",
         message: "Could not access app group container"
       )
     }
-    print("✅ Documents URL: \(docsURL.path)")
 
-    // Check if directory exists, create if needed
-    if !FileManager.default.fileExists(atPath: docsURL.path) {
-      print("📁 Documents directory doesn't exist, creating it...")
-      do {
-        try FileManager.default.createDirectory(
-          at: docsURL, withIntermediateDirectories: true, attributes: nil)
-        print("✅ Created Documents directory")
-      } catch {
-        print("❌ Failed to create Documents directory: \(error)")
-        throw RecorderError.error(
-          name: "DIRECTORY_CREATION_FAILED",
-          message: "Could not create Documents directory: \(error.localizedDescription)"
-        )
-      }
-    } else {
-      print("✅ Documents directory already exists")
-    }
-
-    // 2) Find the newest .mp4
-    print("🔍 Scanning directory for .mp4 files...")
-    let keys: [URLResourceKey] = [
-      .contentModificationDateKey, .creationDateKey, .isRegularFileKey, .fileSizeKey,
-    ]
-
-    let contents: [URL]
-    do {
-      contents = try FileManager.default.contentsOfDirectory(
-        at: docsURL,
-        includingPropertiesForKeys: keys,
-        options: [.skipsHiddenFiles]
+    // Ensure directory exists (in case first run)
+    let fm = FileManager.default
+    if !fm.fileExists(atPath: docsURL.path) {
+      try fm.createDirectory(
+        at: docsURL, withIntermediateDirectories: true, attributes: nil
       )
-      print("📂 Found \(contents.count) total files in directory")
-    } catch {
-      print("❌ Failed to read directory contents: \(error)")
-      throw error
     }
 
+    // Expect at most one .mp4; pick it if present
+    let contents = try fm.contentsOfDirectory(
+      at: docsURL,
+      includingPropertiesForKeys: nil,
+      options: [.skipsHiddenFiles]
+    )
+    
     let mp4s = contents.filter { $0.pathExtension.lowercased() == "mp4" }
-    print("🎥 Found \(mp4s.count) .mp4 files")
 
-    if mp4s.isEmpty {
-      print("⚠️ No .mp4 files found, returning nil")
-      return nil
+    // If none, return nil
+    guard let sourceURL = mp4s.first else { return nil }
+
+    // If there are multiple (unexpected), pick the first and optionally clean extras
+    // You could uncomment the following to delete extras:
+    // for extra in mp4s.dropFirst() { try? fm.removeItem(at: extra) }
+
+    // Prepare local caches destination
+    let cachesURL = try fm.url(
+      for: .cachesDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    )
+    let recordingsDir = cachesURL.appendingPathComponent(
+      "ScreenRecordings", isDirectory: true
+    )
+    if !fm.fileExists(atPath: recordingsDir.path) {
+      try fm.createDirectory(
+        at: recordingsDir, withIntermediateDirectories: true, attributes: nil
+      )
     }
 
-    // Log all mp4 files found
-    for (index, mp4) in mp4s.enumerated() {
-      print("📄 MP4 #\(index + 1): \(mp4.lastPathComponent)")
+    // Destination file (use same name; avoid collision by appending timestamp)
+    var destinationURL =
+      recordingsDir.appendingPathComponent(sourceURL.lastPathComponent)
+    if fm.fileExists(atPath: destinationURL.path) {
+      let ts = Int(Date().timeIntervalSince1970)
+      let base = sourceURL.deletingPathExtension().lastPathComponent
+      destinationURL = recordingsDir.appendingPathComponent("\(base)-\(ts).mp4")
     }
 
-    guard
-      let latestURL = try mp4s.max(by: { a, b in
-        do {
-          let va = try a.resourceValues(forKeys: Set(keys))
-          let vb = try b.resourceValues(forKeys: Set(keys))
-          let da = va.contentModificationDate ?? va.creationDate ?? .distantPast
-          let db = vb.contentModificationDate ?? vb.creationDate ?? .distantPast
+    // Copy into caches
+    try fm.copyItem(at: sourceURL, to: destinationURL)
 
-          print("📅 Comparing dates:")
-          print("   \(a.lastPathComponent): \(da)")
-          print("   \(b.lastPathComponent): \(db)")
-          print("   Result: \(a.lastPathComponent) \(da < db ? "<" : ">=") \(b.lastPathComponent)")
-
-          return da < db
-        } catch {
-          print("❌ Error getting resource values for comparison: \(error)")
-          throw error
-        }
-      })
-    else {
-      print("❌ Failed to find latest file (this shouldn't happen if mp4s is not empty)")
-      return nil
-    }
-
-    print("🏆 Latest file selected: \(latestURL.lastPathComponent)")
-
-    // 3) Build ScreenRecordingFile
-    print("📊 Getting file attributes...")
-    let attrs: [FileAttributeKey: Any]
-    do {
-      attrs = try FileManager.default.attributesOfItem(atPath: latestURL.path)
-      print("✅ Successfully got file attributes")
-    } catch {
-      print("❌ Failed to get file attributes: \(error)")
-      throw error
-    }
-
+    // Build ScreenRecordingFile from the local copy
+    let attrs = try fm.attributesOfItem(atPath: destinationURL.path)
     let size = (attrs[.size] as? NSNumber)?.doubleValue ?? 0.0
-    print("📏 File size: \(size) bytes (\(size / 1024 / 1024) MB)")
 
-    print("🎵 Creating AVURLAsset for duration...")
-    let asset = AVURLAsset(url: latestURL)
+    let asset = AVURLAsset(url: destinationURL)
     let duration = CMTimeGetSeconds(asset.duration)
-    print("⏱️ Duration: \(duration) seconds")
 
-    // Read mic flag saved by the extension
-    print("🎤 Checking microphone setting...")
     let micEnabled =
       UserDefaults(suiteName: appGroupId)?
       .bool(forKey: "LastBroadcastMicrophoneWasEnabled") ?? false
-    print("🎤 Microphone was enabled: \(micEnabled)")
 
-    let result = ScreenRecordingFile(
-      path: latestURL.path,
-      name: latestURL.lastPathComponent,
+    return ScreenRecordingFile(
+      path: destinationURL.path,
+      name: destinationURL.lastPathComponent,
       size: size,
       duration: duration,
       enabledMicrophone: micEnabled
     )
-
-    print("✅ Successfully created ScreenRecordingFile:")
-    print("   Path: \(result.path)")
-    print("   Name: \(result.name)")
-    print("   Size: \(result.size)")
-    print("   Duration: \(result.duration)")
-    print("   Mic: \(result.enabledMicrophone)")
-    print("🎬 retrieveLastGlobalRecording: Function completed successfully")
-
-    return result
   }
 
   func safelyClearGlobalRecordingFiles() throws {
