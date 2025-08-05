@@ -24,12 +24,14 @@ const withScreenRecorder: ConfigPlugin<ConfigProps> = (config, props = {}) => {
   if (config.ios == null) config.ios = {};
   if (config.ios.infoPlist == null) config.ios.infoPlist = {};
 
-  config.ios.infoPlist.NSCameraUsageDescription =
-    props.cameraPermissionText ??
-    (config.ios.infoPlist.NSCameraUsageDescription as string | undefined) ??
-    CAMERA_USAGE;
+  if (props.enableCameraPermission === true) {
+    config.ios.infoPlist.NSCameraUsageDescription =
+      props.cameraPermissionText ??
+      (config.ios.infoPlist.NSCameraUsageDescription as string | undefined) ??
+      CAMERA_USAGE;
+  }
 
-  if (props.enableMicrophonePermission !== false) {
+  if (props.enableMicrophonePermission === true) {
     config.ios.infoPlist.NSMicrophoneUsageDescription =
       props.microphonePermissionText ??
       (config.ios.infoPlist.NSMicrophoneUsageDescription as
