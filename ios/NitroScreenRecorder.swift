@@ -2,6 +2,7 @@ import AVFoundation
 import Foundation
 import NitroModules
 import ReplayKit
+import UIKit
 
 enum RecorderError: Error {
   case error(name: String, message: String)
@@ -9,6 +10,7 @@ enum RecorderError: Error {
 
 typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
 typealias ScreenRecordingListener = (ScreenRecordingEvent) -> Void
+typealias BroadcastPickerViewListener = (BroadcastPickerPresentationEvent) -> Void
 
 struct Listener<T> {
   let id: Double
@@ -22,15 +24,22 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   private var isGlobalRecordingActive: Bool = false
   private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
   private var recordingEventListeners: [Listener<ScreenRecordingListener>] = []
+  public var broadcastPickerEventListeners: [Listener<BroadcastPickerViewListener>] = []
   private var nextListenerId: Double = 0
+
+  // App state tracking for broadcast modal
+  private var isBroadcastModalShowing: Bool = false
+  private var appStateObservers: [NSObjectProtocol] = []
 
   override init() {
     super.init()
     registerListener()
+    setupAppStateObservers()
   }
 
   deinit {
     unregisterListener()
+    removeAppStateObservers()
   }
 
   func registerListener() {
@@ -48,6 +57,98 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       name: UIScreen.capturedDidChangeNotification,
       object: nil
     )
+  }
+
+  private func setupAppStateObservers() {
+    // Listen for when app becomes active (foreground)
+    let willEnterForegroundObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.willEnterForegroundNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.handleAppWillEnterForeground()
+    }
+
+    let didBecomeActiveObserver = NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      self?.handleAppDidBecomeActive()
+    }
+
+    appStateObservers = [willEnterForegroundObserver, didBecomeActiveObserver]
+    print("🎯 App state observers set up")
+  }
+
+  private func removeAppStateObservers() {
+    appStateObservers.forEach { observer in
+      NotificationCenter.default.removeObserver(observer)
+    }
+    appStateObservers.removeAll()
+    print("🎯 App state observers removed")
+  }
+
+  private func handleAppWillEnterForeground() {
+    print("🎯 App will enter foreground - broadcast modal showing: \(isBroadcastModalShowing)")
+
+    if isBroadcastModalShowing {
+      // The modal was showing and now we're coming back to foreground
+      // This likely means the user dismissed the modal or started/cancelled broadcasting
+      print("🎯 Broadcast modal was showing, app returning to foreground - modal likely dismissed")
+
+      // Small delay to ensure any system UI transitions are complete
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        self?.handleBroadcastModalDismissed()
+      }
+    }
+  }
+
+  private func handleAppDidBecomeActive() {
+    print("🎯 App did become active - broadcast modal showing: \(isBroadcastModalShowing)")
+
+    // Additional check when app becomes fully active
+    if isBroadcastModalShowing {
+      // Double-check that we're actually back and the modal is gone
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        guard let self = self else { return }
+
+        // Check if there are any presented view controllers
+        guard
+          let windowScene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene }).first,
+          let window = windowScene.windows.first(where: { $0.isKeyWindow }),
+          let rootVC = window.rootViewController
+        else {
+          return
+        }
+
+        var currentVC = rootVC
+        var hasModal = false
+
+        while let presentedVC = currentVC.presentedViewController {
+          currentVC = presentedVC
+          hasModal = true
+        }
+
+        // If we thought the modal was showing but there's no modal, it was dismissed
+        if !hasModal && self.isBroadcastModalShowing {
+          print("🎯 Confirmed: No modal present, broadcast picker was dismissed")
+          self.handleBroadcastModalDismissed()
+        }
+      }
+    }
+  }
+
+  private func handleBroadcastModalDismissed() {
+    guard isBroadcastModalShowing else { return }
+
+    print("🎯 Handling broadcast modal dismissal")
+    isBroadcastModalShowing = false
+
+    // Notify all listeners that the modal was dismissed
+    broadcastPickerEventListeners.forEach { $0.callback(.dismissed) }
+    print("🎯 Notified \(broadcastPickerEventListeners.count) listeners of dismissal")
   }
 
   @objc private func handleScreenRecordingChange() {
@@ -270,40 +371,44 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
+  func addBroadcastPickerListener(callback: @escaping (BroadcastPickerPresentationEvent) -> Void)
+    throws
+    -> Double
+  {
+    let listener = Listener(id: nextListenerId, callback: callback)
+    broadcastPickerEventListeners.append(listener)
+    nextListenerId += 1
+    return listener.id
+  }
+
+  func removeBroadcastPickerListener(id: Double) throws {
+    broadcastPickerEventListeners.removeAll { $0.id == id }
+  }
+
   /**
-   Attaches a micro PickerView button off-screen screen and presses that button to open the broadcast.
+   Attaches a micro PickerView button off-screen and presses that button to open the broadcast.
    */
   func presentGlobalBroadcastModal(enableMicrophone: Bool = true) {
     DispatchQueue.main.async { [weak self] in
       guard let self = self else { return }
 
-      print("📱 Creating broadcast picker...")
-
       let broadcastPicker = RPSystemBroadcastPickerView(
-        frame: CGRect(x: 2000, y: 2000, width: 1, height: 1))
-
-      let bundleID = getBroadcastExtensionBundleId()
-      print("🎯 Preferred extension bundle ID: \(bundleID ?? "none")")
-
-      if let bundleID = bundleID {
-        broadcastPicker.preferredExtension = bundleID
-      } else {
-        print("⚠️ No broadcast extension bundle ID found - user will see all available extensions")
-      }
-
-      // Show microphone button - user can choose to enable/disable mic in the system picker
+        frame: CGRect(x: 2000, y: 2000, width: 1, height: 1)
+      )
+      broadcastPicker.preferredExtension = getBroadcastExtensionBundleId()
       broadcastPicker.showsMicrophoneButton = enableMicrophone
 
+      // ① insert off-screen
       guard
-        let window = UIApplication.shared
+        let windowScene = UIApplication.shared
           .connectedScenes
           .compactMap({ $0 as? UIWindowScene })
-          .first?
+          .first,
+        let window = windowScene
           .windows
           .first(where: { $0.isKeyWindow })
       else {
-        print("❌ Could not find key window")
-        // Could potentially call error callback here if we stored it
+        print("❌ No key window found, cannot present broadcast picker")
         return
       }
 
@@ -311,19 +416,26 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       broadcastPicker.alpha = 0.01
       window.addSubview(broadcastPicker)
 
-      // Trigger the picker programmatically
-      if let button = broadcastPicker.subviews.first(where: { $0 is UIButton }) as? UIButton {
-        print("✅ Found button, triggering...")
-        button.sendActions(for: .touchUpInside)
-      } else {
-        print("❌ No button found in broadcast picker")
-        // Could potentially call error callback here if we stored it
+      // ② tap the hidden button to bring up the system modal
+      if let btn = broadcastPicker
+        .subviews
+        .compactMap({ $0 as? UIButton })
+        .first
+      {
+        btn.sendActions(for: .touchUpInside)
+
+        // Mark that we're showing the modal
+        self.isBroadcastModalShowing = true
+        print("🎯 Broadcast modal marked as showing")
+
+        // Notify listeners
+        self.broadcastPickerEventListeners.forEach { $0.callback(.showing) }
       }
 
-      // Clean up the picker after a delay
-      DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-        print("🧹 Cleaning up broadcast picker")
+      // ③ cleanup the picker after some time
+      DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
         broadcastPicker.removeFromSuperview()
+        print("🎯 Broadcast picker view removed from superview")
       }
     }
   }

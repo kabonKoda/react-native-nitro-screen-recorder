@@ -7,6 +7,7 @@ import {
   ScreenRecordingEvent,
   PermissionStatus,
   GlobalRecordingInput,
+  BroadcastPickerPresentationEvent,
 } from './types';
 import { Platform } from 'react-native';
 
@@ -284,7 +285,7 @@ export function retrieveLastGlobalRecording(): ScreenRecordingFile | undefined {
 // ============================================================================
 
 /**
- * Adds a listener for screen recording events (start, stop, error, etc.).
+ * Adds a listener for screen recording events (began, ended, etc.).
  * Returns a cleanup function to remove the listener when no longer needed.
  *
  * @platform iOS, Android
@@ -309,6 +310,40 @@ export function addScreenRecordingListener(
     NitroScreenRecorderHybridObject.addScreenRecordingListener(listener);
   return () => {
     NitroScreenRecorderHybridObject.removeScreenRecordingListener(listenerId);
+  };
+}
+
+/**
+ * Adds a listener for ios only to track whether (start, stop, error, etc.).
+ * Returns a cleanup function to remove the listener when no longer needed.
+ *
+ * @platform iOS
+ * @param listener Callback function that receives the status of the BroadcastPickerView
+ * on ios
+ * @returns Cleanup function to remove the listener
+ * @example
+ * ```typescript
+ * useEffect(() => {
+ *  const removeListener = addBroadcastPickerListener((event: BroadcastPickerPresentationEvent) => {
+ *    console.log("Picker status", event)
+ *  });
+ * // Later, remove the listener
+ * return () => removeListener();
+ * },[])
+ * ```
+ */
+export function addBroadcastPickerListener(
+  listener: (event: BroadcastPickerPresentationEvent) => void
+): () => void {
+  if (Platform.OS === 'android') {
+    // return a no-op cleanup function
+    return () => {};
+  }
+  let listenerId: number;
+  listenerId =
+    NitroScreenRecorderHybridObject.addBroadcastPickerListener(listener);
+  return () => {
+    NitroScreenRecorderHybridObject.removeBroadcastPickerListener(listenerId);
   };
 }
 

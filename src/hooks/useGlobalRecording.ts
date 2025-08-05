@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+  addBroadcastPickerListener,
   addScreenRecordingListener,
   retrieveLastGlobalRecording,
 } from '../functions';
@@ -29,6 +30,15 @@ type GlobalRecordingHookInput = {
    * @param file The screen recording file, or undefined if retrieval failed
    */
   onRecordingFinished?: (file?: ScreenRecordingFile) => void;
+  /**
+   * A callback for iOS when the broadcast modal shows, in case you want to
+   * perform some analytics or tasks. Is a no-op on android.
+   */
+  onBroadcastModalShown?: () => void;
+  /* A callback for iOS when the broadcast modal is dimissed, in case you want to
+   * perform some analytics or tasks. Is a no-op on android.
+   */
+  onBroadcastModalDismissed?: () => void;
   /**
    * Time in milliseconds to wait after recording ends before attempting to retrieve the file.
    * This allows the system time to finish writing the recording to disk.
@@ -78,6 +88,12 @@ type GlobalRecordingHookOutput = {
  *     onRecordingStarted: () => {
  *       analytics.track('recording_started');
  *     },
+ *     onBroadcastModalShown: () => {
+ *       console.log("User tried to initiate recording")
+ *     },
+ *     onBroadcastModalDismissed: () => {
+ *       redirectToAnotherApp()
+ *     },
  *     onRecordingFinished: async (file) => {
  *       if (file) {
  *         try {
@@ -111,6 +127,16 @@ export const useGlobalRecording = (
         const file = retrieveLastGlobalRecording();
         props?.onRecordingFinished?.(file);
       }
+    });
+
+    return unsubscribe;
+  }, [props]);
+
+  useEffect(() => {
+    const unsubscribe = addBroadcastPickerListener((event) => {
+      event === 'dismissed'
+        ? props?.onBroadcastModalDismissed?.()
+        : props?.onBroadcastModalShown?.();
     });
 
     return unsubscribe;

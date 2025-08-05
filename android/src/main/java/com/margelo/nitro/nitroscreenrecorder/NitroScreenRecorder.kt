@@ -125,6 +125,17 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     screenRecordingListeners.removeAll { it.id == id }
   }
 
+  override fun addBroadcastPickerListener(
+    callback: (BroadcastPickerPresentationEvent) -> Unit
+  ): Double {
+    // No-op on Android - broadcast picker is iOS-only concept
+    return 0.0
+  }
+
+  override fun removeBroadcastPickerListener(id: Double) {
+    // No-op on Android - broadcast picker is iOS-only concept  
+  }
+
   // Service connection for Global Recording
   private val serviceConnection = object : ServiceConnection {
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {

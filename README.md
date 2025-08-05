@@ -418,6 +418,8 @@ React hook for monitoring and responding to global screen recording events.
 **Parameters:**
 - `onRecordingStarted?: () => void` — Called when a global recording begins.
 - `onRecordingFinished?: (file?: ScreenRecordingFile) => void` — Called after recording ends (with a delay to allow the file to settle).
+- `onBroadcastPickerShown?: () => void` — Called when the broadcast picker on ios is shown.
+- `onBroadcastPickerDismissed?: () => void` — Called with the broadcast picker on ios is dismissed.
 - `settledTimeMs?: number` — Milliseconds to wait after recording end before attempting to retrieve the file. Defaults to 500.
 
 **Returns:** `{ isRecording: boolean }` — whether a global recording is currently active.
@@ -432,6 +434,12 @@ const { isRecording } = useGlobalRecording({
     if (file) {
       console.log('finished:', file.path);
     }
+  },
+  onBroadcastPickerShown: () => {
+    console.log("Perform some action")
+  },
+  onBroadcastPickerDismissed: () => {
+    console.log("Perform some other action")
   },
   settledTimeMs: 600,
 });
@@ -639,48 +647,70 @@ if (lastRecording) {
 
 ## Event Listeners
 
-### `addScreenRecordingListener(listener): number`
+### `addScreenRecordingListener(listener): () => void`
 
-Adds a listener for screen recording events (start, stop, error, etc.). Returns a listener ID that can be used to remove the listener.
+Adds a listener for screen recording events (began, ended, etc.). Returns a cleanup function to remove the listener when no longer needed.
 
 **Platform:** iOS, Android
 
 **Parameters:**
 -   `listener`: Callback function that receives screen recording events
 
-**Returns:** Listener ID number for removing the listener
-
-**Example:**
-```ts
-import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
-
-const listenerId = addScreenRecordingListener((event) => {
-  console.log("Event type:", event.type, "Event reason:", event.reason);
-});
-```
-
-### `removeScreenRecordingListener(id): void`
-
-Removes a previously added screen recording event listener.
-
-**Platform:** iOS, Android
-
-**Parameters:**
--   `id`: The listener ID returned from `addScreenRecordingListener`
+**Returns:** Cleanup function to remove the listener
 
 **Example:**
 ```ts
 import { useEffect } from 'react';
-import { addScreenRecordingListener, removeScreenRecordingListener } from 'react-native-nitro-screen-recorder';
+import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
 
 useEffect(() => {
-  const listenerId = addScreenRecordingListener((event) => {
+  const removeListener = addScreenRecordingListener((event) => {
     console.log("Event type:", event.type, "Event reason:", event.reason);
   });
 
-  return () => removeScreenRecordingListener(listenerId);
+  // Clean up listener when component unmounts
+  return removeListener;
 }, []);
 ```
+
+### `addBroadcastPickerListener(listener): () => void`
+
+Adds a listener for iOS broadcast picker events (showing, dismissed, started recording, etc.). Returns a cleanup function to remove the listener when no longer needed.
+
+**Platform:** iOS only (returns no-op cleanup function on Android)
+
+**Parameters:**
+-   `listener`: Callback function that receives broadcast picker presentation events
+
+**Returns:** Cleanup function to remove the listener
+
+**Example:**
+```ts
+import { useEffect } from 'react';
+import { addBroadcastPickerListener } from 'react-native-nitro-screen-recorder';
+
+useEffect(() => {
+  const removeListener = addBroadcastPickerListener((event) => {
+    console.log("Picker status:", event);
+    
+    switch (event) {
+      case 'showing':
+        console.log("Broadcast picker is showing");
+        break;
+      case 'dismissed':
+        console.log("Broadcast picker was dismissed without starting recording");
+        break;
+    }
+  });
+
+  // Clean up listener when component unmounts
+  return removeListener;
+}, []);
+```
+
+**Event Types:**
+- `showing`: The broadcast picker modal is displayed to the user
+- `dismissed`: The broadcast modal was dismissed without starting recording
 
 ## Utilities
 

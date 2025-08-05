@@ -19,16 +19,20 @@ export default function App() {
     ScreenRecorder.ScreenRecordingFile | undefined
   >();
 
-  // const {
-  //   recording: globalRecording,
-  //   refetch,
-  //   // isError,
-  //   isLoading,
-  //   // error,
-  // } = ScreenRecorder.useGlobalRecording({
-  //   refetchOnAppForeground: true,
-  // });
-
+  const { isRecording } = ScreenRecorder.useGlobalRecording({
+    onRecordingStarted: () => {
+      console.log('Recording started');
+    },
+    onRecordingFinished: () => {
+      console.log('Recording ended');
+    },
+    onBroadcastModalShown: () => {
+      console.log('Modal showing');
+    },
+    onBroadcastModalDismissed: () => {
+      console.log('Modal dismissed');
+    },
+  });
   // @ts-ignore
   const inAppPlayer = useVideoPlayer(inAppRecording?.path);
   // @ts-ignore
@@ -206,20 +210,23 @@ export default function App() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Global Recording</Text>
         <View style={styles.buttonRow}>
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Start Global"
-              onPress={handleStartGlobalRecording}
-              color="#34C759"
-            />
-          </View>
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Stop Global"
-              onPress={handleStopGlobalRecording}
-              color="#FF3B30"
-            />
-          </View>
+          {!isRecording ? (
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Start Global"
+                onPress={handleStartGlobalRecording}
+                color="#34C759"
+              />
+            </View>
+          ) : (
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Stop Global"
+                onPress={handleStopGlobalRecording}
+                color="#FF3B30"
+              />
+            </View>
+          )}
           <View style={styles.buttonContainer}>
             <Button
               title="Get Latest File"

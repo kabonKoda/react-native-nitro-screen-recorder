@@ -7,6 +7,7 @@ import type {
   ScreenRecordingEvent,
   PermissionStatus,
   RecordingError,
+  BroadcastPickerPresentationEvent,
 } from './types';
 
 /**
@@ -66,6 +67,10 @@ export interface NitroScreenRecorder
     settledTimeMs: number
   ): Promise<ScreenRecordingFile | undefined>;
   retrieveLastGlobalRecording(): ScreenRecordingFile | undefined;
+  addBroadcastPickerListener(
+    callback: (event: BroadcastPickerPresentationEvent) => void
+  ): number;
+  removeBroadcastPickerListener(id: number): void;
 
   // ============================================================================
   // UTILITIES

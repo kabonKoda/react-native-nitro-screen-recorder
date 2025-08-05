@@ -243,7 +243,6 @@ export type RecordingEventReason = 'began' | 'ended';
  * Specifies the type of recording that triggered an event.
  * Note: This type is deprecated but still supported for backwards compatibility.
  *
- * @deprecated Use specific recording method identification instead
  * @example
  * ```typescript
  * const eventType: RecordingEventType = 'global'; // Global screen recording
@@ -279,3 +278,8 @@ export interface ScreenRecordingEvent {
   /** What happened to the recording */
   reason: RecordingEventReason;
 }
+/**
+ * @platform ios-only
+ * Track the status of the broadcast picker view for fine tuning system recordings.
+ */
+export type BroadcastPickerPresentationEvent = 'showing' | 'dismissed';
