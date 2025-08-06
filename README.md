@@ -58,6 +58,7 @@ export default {
           enableMicrophonePermission: true,
           microphonePermissionText: "Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio",
           iosAppGroupIdentifier: "group.com.yourcompany.yourapp.screenrecording",
+          iosExtensionBundleIdentifier: "com.yourcompany.yourapp.BroadcastExtension",
           showPluginLogs: false
         }
       ]
