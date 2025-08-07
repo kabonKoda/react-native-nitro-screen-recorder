@@ -16,39 +16,11 @@ export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
     );
 
     const androidManifest = mod.modResults;
-    const application = androidManifest.manifest.application?.[0];
 
-    if (!application) {
-      throw new Error('Could not find application in AndroidManifest.xml');
+    if (!androidManifest.manifest.application?.length) {
+      throw new Error('Cannot find <application> in AndroidManifest.xml');
     }
-
-    // Add required permissions (still needed for Global Recording)
-    const requiredPermissions = [
-      'android.permission.FOREGROUND_SERVICE',
-      'android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION',
-      'android.permission.RECORD_AUDIO',
-    ];
-
-    if (!androidManifest.manifest['uses-permission']) {
-      androidManifest.manifest['uses-permission'] = [];
-    }
-
-    requiredPermissions.forEach((permission) => {
-      const existingPermission = androidManifest.manifest[
-        'uses-permission'
-      ]?.find((perm) => perm.$?.['android:name'] === permission);
-
-      if (!existingPermission) {
-        androidManifest.manifest['uses-permission']!.push({
-          $: {
-            'android:name': permission,
-          },
-        });
-        ScreenRecorderLog.log(`✅ Added permission: ${permission}`);
-      } else {
-        ScreenRecorderLog.log(`ℹ️ Permission already exists: ${permission}`);
-      }
-    });
+    const application = androidManifest.manifest.application![0];
 
     if (!application.service) {
       application.service = [];
