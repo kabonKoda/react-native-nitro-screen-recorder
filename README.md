@@ -539,15 +539,15 @@ Starts in-app screen recording with the specified configuration. Records only th
 ```ts
 import { startInAppRecording } from 'react-native-nitro-screen-recorder';
 
-await startInAppRecording(
-  true, // enableMic
-  true, // enableCamera
-  { width: 100, height: 150, top: 30, left: 10 }, // cameraPreviewStyle
-  'front', // cameraDevice
-  (file) => {
+await startInAppRecording({
+  enableMic: true,
+  enableCamera: true, 
+  cameraPreviewStyle: { width: 100, height: 150, top: 30, left: 10 }, 
+  cameraDevice: 'front',
+  onRecordingFinished: (file) => {
     console.log('Recording saved:', file.path);
   }
-);
+});
 ```
 
 ### `stopInAppRecording(): Promise<ScreenRecordingFile | undefined>`
@@ -600,12 +600,12 @@ Starts global screen recording that captures the entire device screen. Records s
 ```ts
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
-startGlobalRecording(
-  true, // enableMic
-  (error) => {
+startGlobalRecording({
+  enableMic: true, // enableMic
+  onRecordingError: (error) => {
     console.error('Global recording error:', error.message);
   }
-);
+});
 ```
 
 ### `stopGlobalRecording(options?): Promise<ScreenRecordingFile | undefined>`
@@ -676,7 +676,7 @@ useEffect(() => {
 
 ### `addBroadcastPickerListener(listener): () => void`
 
-Adds a listener for iOS broadcast picker events (showing, dismissed, started recording, etc.). Returns a cleanup function to remove the listener when no longer needed.
+Adds a listener for iOS broadcast picker status changes (showing & dismissed). Returns a cleanup function to remove the listener when no longer needed. This helps when trying to perform some action on iOS as soon as the broadcast picker is dismissed.
 
 **Platform:** iOS only (returns no-op cleanup function on Android)
 
