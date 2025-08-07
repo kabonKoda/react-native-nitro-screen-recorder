@@ -101,17 +101,21 @@ object RecorderUtils {
   }
 
   /**
-   * Retrieves the duration of a video file in milliseconds.
-   */
-  fun getVideoDuration(file: File): Double {
+  * Retrieves the duration of a video file in **seconds**.
+  */
+  fun getVideoDurationSeconds(file: File): Double {
     if (!file.exists()) return 0.0
     return try {
-      val retriever = MediaMetadataRetriever()
-      retriever.setDataSource(file.absolutePath)
-      val duration =
-        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+      val retriever = MediaMetadataRetriever().apply {
+        setDataSource(file.absolutePath)
+      }
+      // extract as ms, convert to Double, divide by 1000
+      val seconds = retriever
+        .extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+        ?.toDouble()
+        ?.div(1_000.0) ?: 0.0
       retriever.release()
-      duration?.toDouble() ?: 0.0
+      seconds
     } catch (e: Exception) {
       Log.w(TAG, "Could not get video duration: ${e.message}")
       0.0
