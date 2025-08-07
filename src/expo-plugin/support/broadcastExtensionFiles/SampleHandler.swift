@@ -139,7 +139,7 @@ final class SampleHandler: RPBroadcastSampleHandler {
     }
 
     do {
-      try writer.processSampleBuffer(sampleBuffer, with: sampleBufferType)
+      _ = try writer.processSampleBuffer(sampleBuffer, with: sampleBufferType)
     } catch {
       finishBroadcastWithError(error)
     }
