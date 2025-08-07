@@ -79,7 +79,7 @@ class ScreenRecordingService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Log.d(TAG, "🚀 onStartCommand called with action: ${intent?.action}")
-    
+
     this.startId = startId
 
     when (intent?.action) {
@@ -166,7 +166,10 @@ class ScreenRecordingService : Service() {
       // Register the callback BEFORE creating VirtualDisplay
       mediaProjection?.registerCallback(mediaProjectionCallback, null)
 
-      val recordingsDir = File(applicationContext.filesDir, "recordings")
+      // write into the app-specific external cache (no runtime READ_EXTERNAL_STORAGE needed)
+      val base = applicationContext.externalCacheDir
+        ?: applicationContext.filesDir
+      val recordingsDir = File(base, "recordings")
       currentRecordingFile =
         RecorderUtils.createOutputFile(recordingsDir, "global_recording")
 
