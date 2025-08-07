@@ -313,7 +313,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
             // build your ScreenRecordingFile
             let file = ScreenRecordingFile(
-              path: outputURL.path,
+              path: outputURL.absoluteString,
               name: outputURL.lastPathComponent,
               size: attrs[.size] as? Double ?? 0,
               duration: duration,
@@ -586,7 +586,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       .bool(forKey: "LastBroadcastMicrophoneWasEnabled") ?? false
 
     return ScreenRecordingFile(
-      path: destinationURL.path,
+      path: destinationURL.absoluteString,
       name: destinationURL.lastPathComponent,
       size: size,
       duration: duration,

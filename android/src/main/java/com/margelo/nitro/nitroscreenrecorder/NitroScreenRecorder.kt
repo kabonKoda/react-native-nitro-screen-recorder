@@ -362,7 +362,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     return lastGlobalRecording?.let { file ->
       if (file.exists()) {
         ScreenRecordingFile(
-          path = file.absolutePath,
+          path = "file://${file.absolutePath}",
           name = file.name,
           size = file.length().toDouble(),
           duration = RecorderUtils.getVideoDuration(file),
