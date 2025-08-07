@@ -163,7 +163,7 @@ class ScreenRecordingService : Service() {
       // Register the callback BEFORE creating VirtualDisplay
       mediaProjection?.registerCallback(mediaProjectionCallback, null)
 
-      val recordingsDir = File(getExternalFilesDir(null), "recordings")
+      val recordingsDir = File(applicationContext.filesDir, "recordings")
       currentRecordingFile =
         RecorderUtils.createOutputFile(recordingsDir, "global_recording")
 

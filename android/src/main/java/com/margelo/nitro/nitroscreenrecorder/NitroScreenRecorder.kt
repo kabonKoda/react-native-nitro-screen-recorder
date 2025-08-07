@@ -377,7 +377,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
   override fun clearRecordingCache() {
     val ctx = NitroModules.applicationContext ?: return
     // Note: In-app recordings used internal storage. We only clear global now.
-    val globalDir = File(ctx.getExternalFilesDir(null), "recordings")
+    val globalDir = File(ctx.filesDir, "recordings")
     RecorderUtils.clearDirectory(globalDir)
     lastGlobalRecording = null
   }

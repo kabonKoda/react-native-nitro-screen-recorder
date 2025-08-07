@@ -103,7 +103,7 @@ object RecorderUtils {
   /**
   * Retrieves the duration of a video file in **seconds**.
   */
-  fun getVideoDurationSeconds(file: File): Double {
+  fun getVideoDuration(file: File): Double {
     if (!file.exists()) return 0.0
     return try {
       val retriever = MediaMetadataRetriever().apply {
