@@ -28,6 +28,7 @@ class ScreenRecordingService : Service() {
   private var screenWidth = 0
   private var screenHeight = 0
   private var screenDensity = 0
+  private var startId: Int = -1
 
   private val binder = LocalBinder()
 
@@ -78,6 +79,8 @@ class ScreenRecordingService : Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Log.d(TAG, "🚀 onStartCommand called with action: ${intent?.action}")
+    
+    this.startId = startId
 
     when (intent?.action) {
       ACTION_START_RECORDING -> {
@@ -211,7 +214,7 @@ class ScreenRecordingService : Service() {
       )
       NitroScreenRecorder.notifyGlobalRecordingError(error)
       cleanup()
-      stopSelf()
+      stopSelf(this.startId)
     }
   }
 
@@ -251,7 +254,7 @@ class ScreenRecordingService : Service() {
     } finally {
       cleanup()
       stopForeground(true)
-      stopSelf()
+      stopSelf(this.startId)
     }
 
     return recordingFile
