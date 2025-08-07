@@ -22,9 +22,19 @@
     ],
     "ios": {
       "bundleIdentifier": "nitroscreenrecorderexample.example",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "ScreenRecorder needs access to your Microphone."
+      },
+      "appleTeamId": "32U9AXHQSK"
     },
     "android": {
-      "package": "nitroscreenrecorderexample.example"
+      "package": "nitroscreenrecorderexample.example",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "plugins": [
       "expo-video",
@@ -35,7 +45,7 @@
           "enableMicrophonePermission": true,
           "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
           "showPluginLogs": true
-      }
+        }
       ]
     ]
   }

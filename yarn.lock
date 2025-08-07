@@ -7770,6 +7770,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-video-metadata@npm:^1.5.0":
+  version: 1.5.0
+  resolution: "expo-video-metadata@npm:1.5.0"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 16b8256af99599d4628ce4f370908b69e70ac785c8bcc1c4988710654b606a36dbab60cc22ddc8a5da68cb346257fceae39c77ba3839bc664d5d2cadd357c47e
+  languageName: node
+  linkType: hard
+
 "expo-video@npm:~2.2.2":
   version: 2.2.2
   resolution: "expo-video@npm:2.2.2"
@@ -12798,6 +12809,7 @@ __metadata:
     expo-dev-client: ^5.2.4
     expo-status-bar: ~2.2.3
     expo-video: ~2.2.2
+    expo-video-metadata: ^1.5.0
     react: 19.0.0
     react-native: 0.79.5
     react-native-builder-bob: ^0.40.12

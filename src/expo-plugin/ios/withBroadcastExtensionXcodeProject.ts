@@ -43,7 +43,9 @@ function getMainAppDevelopmentTeam(
     }
   }
 
-  l.log('No DEVELOPMENT_TEAM found in main app build settings.');
+  l.error(
+    'No DEVELOPMENT_TEAM found in main app build settings. Developer will need to manually add Dev Team.'
+  );
   return null;
 }
 

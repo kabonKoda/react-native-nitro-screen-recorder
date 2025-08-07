@@ -9,6 +9,7 @@ import {
 import * as ScreenRecorder from '../../';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
+import { getVideoInfoAsync } from 'expo-video-metadata';
 
 export default function App() {
   const [inAppRecording, setInAppRecording] = useState<
@@ -112,15 +113,30 @@ export default function App() {
     });
   };
 
-  const handleStopGlobalRecording = () => {
-    ScreenRecorder.stopGlobalRecording().then((file) => {
-      setGlobalRecording(file);
-    });
+  const checkFileAccessibility = async (
+    file: ScreenRecorder.ScreenRecordingFile | undefined
+  ) => {
+    if (file) {
+      try {
+        console.log('Checking file accessibility for path', file.path);
+        const data = await getVideoInfoAsync(file.path);
+        console.log(JSON.stringify(data, null, 2));
+      } catch (error) {
+        console.error('Error', error);
+      }
+    }
   };
 
-  const handleGetGlobalRecordingFile = () => {
-    const file = ScreenRecorder.retrieveLastGlobalRecording();
-    setGlobalRecording(file);
+  const handleStopGlobalRecording = async () => {
+    const newFile = await ScreenRecorder.stopGlobalRecording();
+    setGlobalRecording(newFile);
+    await checkFileAccessibility(newFile);
+  };
+
+  const handleGetGlobalRecordingFile = async () => {
+    const newFile = ScreenRecorder.retrieveLastGlobalRecording();
+    setGlobalRecording(newFile);
+    await checkFileAccessibility(newFile);
   };
 
   const handleClearRecordingCache = () => {
