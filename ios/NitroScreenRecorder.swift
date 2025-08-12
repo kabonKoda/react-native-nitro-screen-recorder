@@ -17,13 +17,20 @@ struct Listener<T> {
   let callback: T
 }
 
+struct ScreenRecordingListenerType {
+  let id: Double
+  let callback: (ScreenRecordingEvent) -> Void
+  let ignoreRecordingsInitiatedElsewhere: Bool
+}
+
 class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
   let recorder = RPScreenRecorder.shared()
   private var inAppRecordingActive: Bool = false
   private var isGlobalRecordingActive: Bool = false
+  private var globalRecordingInitiatedByThisPackage: Bool = false
   private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
-  private var recordingEventListeners: [Listener<ScreenRecordingListener>] = []
+  private var recordingEventListeners: [ScreenRecordingListenerType] = []
   public var broadcastPickerEventListeners: [Listener<BroadcastPickerViewListener>] = []
   private var nextListenerId: Double = 0
 
@@ -159,16 +166,32 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       } else {
         type = .global
         isGlobalRecordingActive = false
+        globalRecordingInitiatedByThisPackage = false // Reset when global recording ends
       }
     }
+    
     let event = ScreenRecordingEvent(type: type, reason: reason)
-    recordingEventListeners.forEach { $0.callback(event) }
+    
+    // Filter listeners based on their ignore preference
+    recordingEventListeners.forEach { listener in
+      let isExternalGlobalRecording = type == .global && !globalRecordingInitiatedByThisPackage
+      let shouldIgnore = listener.ignoreRecordingsInitiatedElsewhere && isExternalGlobalRecording
+      
+      if !shouldIgnore {
+        listener.callback(event)
+      }
+    }
   }
 
-  func addScreenRecordingListener(callback: @escaping (ScreenRecordingEvent) -> Void) throws
-    -> Double
-  {
-    let listener = Listener(id: nextListenerId, callback: callback)
+  func addScreenRecordingListener(
+    ignoreRecordingsInitiatedElsewhere: Bool,
+    callback: @escaping (ScreenRecordingEvent) -> Void
+  ) throws -> Double {
+    let listener = ScreenRecordingListenerType(
+      id: nextListenerId,
+      callback: callback,
+      ignoreRecordingsInitiatedElsewhere: ignoreRecordingsInitiatedElsewhere
+    )
     recordingEventListeners.append(listener)
     nextListenerId += 1
     return listener.id
@@ -467,6 +490,10 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
 
     // Present the broadcast picker
     presentGlobalBroadcastModal(enableMicrophone: enableMic)
+    
+    // This is sort of a hack to try and track if the user opened the broadcast modal first
+    // may not be that reliable, because technically they can open this modal and close it without starting a broadcast
+    globalRecordingInitiatedByThisPackage = true
 
   }
   // This is a hack I learned through:
@@ -536,7 +563,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       includingPropertiesForKeys: nil,
       options: [.skipsHiddenFiles]
     )
-    
+
     let mp4s = contents.filter { $0.pathExtension.lowercased() == "mp4" }
 
     // If none, return nil

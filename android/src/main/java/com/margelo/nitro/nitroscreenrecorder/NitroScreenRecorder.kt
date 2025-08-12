@@ -110,6 +110,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
   }
 
   override fun addScreenRecordingListener(
+    ignoreRecordingsInitiatedElsewhere: Boolean,
     callback: (ScreenRecordingEvent) -> Unit
   ): Double {
     val id = nextListenerId++

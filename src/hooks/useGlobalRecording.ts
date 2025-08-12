@@ -46,6 +46,11 @@ type GlobalRecordingHookInput = {
    * @default 500
    */
   settledTimeMs?: number;
+  /**
+   * This property is passed to the underlying listener to ignore recordings that were initiated by the
+   * external system. This is useful if you only want to track global recordings that were started via the startGlobalRecording function.
+   */
+  ignoreRecordingsInitiatedElsewhere?: boolean;
 };
 
 /**
@@ -113,20 +118,24 @@ export const useGlobalRecording = (
   const [isRecording, setIsRecording] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = addScreenRecordingListener(async (event) => {
-      if (event.type === 'withinApp') return;
+    const unsubscribe = addScreenRecordingListener({
+      ignoreRecordingsInitiatedElsewhere:
+        props?.ignoreRecordingsInitiatedElsewhere ?? false,
+      listener: async (event) => {
+        if (event.type === 'withinApp') return;
 
-      if (event.reason === 'began') {
-        setIsRecording(true);
-        props?.onRecordingStarted?.();
-      } else {
-        setIsRecording(false);
-        // We add a small delay after the recording ends to allow the file to finish writing
-        // to disk before trying to fetch it
-        delay(props?.settledTimeMs ?? 500);
-        const file = retrieveLastGlobalRecording();
-        props?.onRecordingFinished?.(file);
-      }
+        if (event.reason === 'began') {
+          setIsRecording(true);
+          props?.onRecordingStarted?.();
+        } else {
+          setIsRecording(false);
+          // We add a small delay after the recording ends to allow the file to finish writing
+          // to disk before trying to fetch it
+          delay(props?.settledTimeMs ?? 500);
+          const file = retrieveLastGlobalRecording();
+          props?.onRecordingFinished?.(file);
+        }
+      },
     });
 
     return unsubscribe;

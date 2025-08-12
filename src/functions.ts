@@ -302,12 +302,18 @@ export function retrieveLastGlobalRecording(): ScreenRecordingFile | undefined {
  * },[])
  * ```
  */
-export function addScreenRecordingListener(
-  listener: (event: ScreenRecordingEvent) => void
-): () => void {
+export function addScreenRecordingListener({
+  listener,
+  ignoreRecordingsInitiatedElsewhere = false,
+}: {
+  listener: (event: ScreenRecordingEvent) => void;
+  ignoreRecordingsInitiatedElsewhere: boolean;
+}): () => void {
   let listenerId: number;
-  listenerId =
-    NitroScreenRecorderHybridObject.addScreenRecordingListener(listener);
+  listenerId = NitroScreenRecorderHybridObject.addScreenRecordingListener(
+    ignoreRecordingsInitiatedElsewhere,
+    listener
+  );
   return () => {
     NitroScreenRecorderHybridObject.removeScreenRecordingListener(listenerId);
   };

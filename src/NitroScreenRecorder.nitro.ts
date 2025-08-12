@@ -36,9 +36,15 @@ export interface NitroScreenRecorder
   // ============================================================================
 
   addScreenRecordingListener(
+    ignoreRecordingsInitiatedElsewhere: boolean,
     callback: (event: ScreenRecordingEvent) => void
   ): number;
   removeScreenRecordingListener(id: number): void;
+
+  addBroadcastPickerListener(
+    callback: (event: BroadcastPickerPresentationEvent) => void
+  ): number;
+  removeBroadcastPickerListener(id: number): void;
 
   // ============================================================================
   // IN-APP RECORDING
@@ -67,10 +73,6 @@ export interface NitroScreenRecorder
     settledTimeMs: number
   ): Promise<ScreenRecordingFile | undefined>;
   retrieveLastGlobalRecording(): ScreenRecordingFile | undefined;
-  addBroadcastPickerListener(
-    callback: (event: BroadcastPickerPresentationEvent) => void
-  ): number;
-  removeBroadcastPickerListener(id: number): void;
 
   // ============================================================================
   // UTILITIES

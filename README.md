@@ -8,29 +8,31 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 ## Features
 
--   **In-App Recording** (iOS only) - Record your app's content with camera overlay
--   **Global Screen Recording** - System-wide screen capture (iOS & Android)
--   **Camera Integration** - Front/back camera overlay with customizable positioning
--   **Audio Recording** - Microphone support with permission management
--   **Event Listeners** - Real-time recording status updates
--   **File Management** - Automatic file handling and cache management
--   **Permission Management** - Built-in camera and microphone permission handling
--   **React Hooks** - Convenient hooks for permissions and global recording management
+- **In-App Recording** (iOS only) - Record your app's content with camera overlay
+- **Global Screen Recording** - System-wide screen capture (iOS & Android)
+- **Camera Integration** - Front/back camera overlay with customizable positioning
+- **Audio Recording** - Microphone support with permission management
+- **Event Listeners** - Real-time recording status updates
+- **File Management** - Automatic file handling and cache management
+- **Permission Management** - Built-in camera and microphone permission handling
+- **React Hooks** - Convenient hooks for permissions and global recording management
 
 ## Demo
 
-| iOS In-App Recording | iOS Global Recording | Android Global Recording |
-|:---:|:---:|:---:|
+|                          iOS In-App Recording                          |                   iOS Global Recording                    |                     Android Global Recording                      |
+| :--------------------------------------------------------------------: | :-------------------------------------------------------: | :---------------------------------------------------------------: |
 | <img src="./ios_inapp.jpg" width="200" alt="IOS_In-App (With Camera)"> | <img src="./ios_global.jpg" width="200" alt="IOS_Global"> | <img src="./android_global.jpg" width="200" alt="Android_Global"> |
 
 ## Installation
 
 Using npm:
+
 ```sh
 npm install react-native-nitro-screen-recorder react-native-nitro-modules
 ```
 
 Using yarn:
+
 ```sh
 yarn add react-native-nitro-screen-recorder react-native-nitro-modules
 ```
@@ -54,31 +56,35 @@ export default {
         'react-native-nitro-screen-recorder',
         {
           enableCameraPermission: true,
-          cameraPermissionText: "Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay",
+          cameraPermissionText:
+            'Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay',
           enableMicrophonePermission: true,
-          microphonePermissionText: "Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio",
-          iosAppGroupIdentifier: "group.com.yourcompany.yourapp.screenrecording",
-          iosExtensionBundleIdentifier: "com.yourcompany.yourapp.BroadcastExtension",
-          showPluginLogs: false
-        }
-      ]
-    ]
-  }
+          microphonePermissionText:
+            'Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio',
+          iosAppGroupIdentifier:
+            'group.com.yourcompany.yourapp.screenrecording',
+          iosExtensionBundleIdentifier:
+            'com.yourcompany.yourapp.BroadcastExtension',
+          showPluginLogs: false,
+        },
+      ],
+    ],
+  },
 };
 ```
 
 #### Plugin Configuration Options
 
-| Option | Type | Platform | Default | Description |
-|:-------|:-----|:---------|:--------|:------------|
-| `enableCameraPermission` | `boolean` | iOS | `true` | Whether to enable camera permission for screen recording with camera overlay |
-| `cameraPermissionText` | `string` | iOS | `"Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay"` | Camera permission description text displayed in iOS permission dialog |
-| `enableMicrophonePermission` | `boolean` | iOS, Android | `true` | Whether to enable microphone permission for screen recording with audio capture |
-| `microphonePermissionText` | `string` | iOS | `"Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio"` | Microphone permission description text displayed in iOS permission dialog |
-| `disableExperimental` | `boolean` | iOS | `false` | Whether to disable the experimental Expo appExtensions configuration. When true, skips applying the broadcast extension configuration |
-| `iosExtensionBundleIdentifier` | `string` | iOS | `"${PRODUCT_BUNDLE_IDENTIFIER}.BroadcastExtension"` | The ability to customize the Broadcast Extension Bundle Identifier. |
-| `iosAppGroupIdentifier` | `string` | iOS | `"group.${PRODUCT_BUNDLE_IDENTIFIER}.screen-recording"` | App Group identifier used to share data between the main app and its extensions |
-| `showPluginLogs` | `boolean` | iOS, Android | `false` | Whether to display detailed plugin logs during the build process |
+| Option                         | Type      | Platform     | Default                                                                                  | Description                                                                                                                           |
+| :----------------------------- | :-------- | :----------- | :--------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `enableCameraPermission`       | `boolean` | iOS          | `true`                                                                                   | Whether to enable camera permission for screen recording with camera overlay                                                          |
+| `cameraPermissionText`         | `string`  | iOS          | `"Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay"` | Camera permission description text displayed in iOS permission dialog                                                                 |
+| `enableMicrophonePermission`   | `boolean` | iOS, Android | `true`                                                                                   | Whether to enable microphone permission for screen recording with audio capture                                                       |
+| `microphonePermissionText`     | `string`  | iOS          | `"Allow $(PRODUCT_NAME) to access your microphone for screen recording with audio"`      | Microphone permission description text displayed in iOS permission dialog                                                             |
+| `disableExperimental`          | `boolean` | iOS          | `false`                                                                                  | Whether to disable the experimental Expo appExtensions configuration. When true, skips applying the broadcast extension configuration |
+| `iosExtensionBundleIdentifier` | `string`  | iOS          | `"${PRODUCT_BUNDLE_IDENTIFIER}.BroadcastExtension"`                                      | The ability to customize the Broadcast Extension Bundle Identifier.                                                                   |
+| `iosAppGroupIdentifier`        | `string`  | iOS          | `"group.${PRODUCT_BUNDLE_IDENTIFIER}.screen-recording"`                                  | App Group identifier used to share data between the main app and its extensions                                                       |
+| `showPluginLogs`               | `boolean` | iOS, Android | `false`                                                                                  | Whether to display detailed plugin logs during the build process                                                                      |
 
 </details>
 
@@ -126,8 +132,8 @@ Add the following permissions to your `ios/YourApp/Info.plist`:
 1.  Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
 2.  Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
 3.  Update the following values in `SampleHandler.swift`:
-    -   Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
-    -   Replace `<SCHEME>` with your app's custom URL scheme
+    - Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
+    - Replace `<SCHEME>` with your app's custom URL scheme
 
 ### 5. Configure Extension Settings
 
@@ -247,11 +253,11 @@ override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) 
 
 ## Important Notes
 
--   Replace `group.com.yourcompany.yourapp.screenrecording` with your actual app group identifier
--   Replace `com.yourcompany.yourapp` with your actual bundle identifier
--   Ensure both your main app and broadcast extension have the same App Group configured
--   Test thoroughly on physical devices as screen recording doesn't work in simulators
--   Make sure your app has a custom URL scheme configured for deep linking
+- Replace `group.com.yourcompany.yourapp.screenrecording` with your actual app group identifier
+- Replace `com.yourcompany.yourapp` with your actual bundle identifier
+- Ensure both your main app and broadcast extension have the same App Group configured
+- Test thoroughly on physical devices as screen recording doesn't work in simulators
+- Make sure your app has a custom URL scheme configured for deep linking
 
 </details>
 
@@ -303,7 +309,10 @@ export default function ScreenRecorderExample() {
     if (!hasPermission) {
       const granted = await requestPermission();
       if (!granted) {
-        Alert.alert('Permission Required', 'Microphone permission is needed for audio recording');
+        Alert.alert(
+          'Permission Required',
+          'Microphone permission is needed for audio recording'
+        );
         return;
       }
     }
@@ -332,7 +341,9 @@ export default function ScreenRecorderExample() {
       <Button title="Start Global Recording" onPress={handleStartRecording} />
       <Button title="Stop Recording" onPress={handleStopRecording} />
 
-      {isRecording && <Text style={{ marginTop: 10 }}>Recording is active…</Text>}
+      {isRecording && (
+        <Text style={{ marginTop: 10 }}>Recording is active…</Text>
+      )}
     </View>
   );
 }
@@ -342,28 +353,28 @@ export default function ScreenRecorderExample() {
 
 ## Table of Contents
 
--   [React Hooks](#react-hooks)
-    -   [`useCameraPermission()`](#usecamerapermission-permissionstate)
-    -   [`useMicrophonePermission()`](#usemicrophonepermission-permissionstate)
-    -   [`useGlobalRecording()`](#useglobalrecordinginput--globalrecordinghookoutput)
--   [Permissions](#permissions)
-    -   [`getCameraPermissionStatus()`](#getcamerapermissionstatus-permissionstatus)
-    -   [`getMicrophonePermissionStatus()`](#getmicrophonepermissionstatus-permissionstatus)
-    -   [`requestCameraPermission()`](#requestcamerapermission-promisepermissionresponse)
-    -   [`requestMicrophonePermission()`](#requestmicrophonepermission-promisepermissionresponse)
--   [In-App Recording](#in-app-recording)
-    -   [`startInAppRecording()`](#startinapprecordinginput-promisevoid)
-    -   [`stopInAppRecording()`](#stopinapprecording-promisescreenrecordingfile--undefined)
-    -   [`cancelInAppRecording()`](#cancelinapprecording-promisevoid)
--   [Global Recording](#global-recording)
-    -   [`startGlobalRecording()`](#startglobalrecordinginput-void)
-    -   [`stopGlobalRecording()`](#stopglobalrecording-promisescreenrecordingfile--undefined)
-    -   [`retrieveLastGlobalRecording()`](#retrievelastglobalrecording-screenrecordingfile--undefined)
--   [Event Listeners](#event-listeners)
-    -   [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener-number)
-    -   [`removeScreenRecordingListener(id): void`](#removescreenrecordinglistenerid-void)
--   [Utilities](#utilities)
-    -   [`clearRecordingCache()`](#clearrecordingcache-void)
+- [React Hooks](#react-hooks)
+  - [`useCameraPermission()`](#usecamerapermission-permissionstate)
+  - [`useMicrophonePermission()`](#usemicrophonepermission-permissionstate)
+  - [`useGlobalRecording()`](#useglobalrecordinginput--globalrecordinghookoutput)
+- [Permissions](#permissions)
+  - [`getCameraPermissionStatus()`](#getcamerapermissionstatus-permissionstatus)
+  - [`getMicrophonePermissionStatus()`](#getmicrophonepermissionstatus-permissionstatus)
+  - [`requestCameraPermission()`](#requestcamerapermission-promisepermissionresponse)
+  - [`requestMicrophonePermission()`](#requestmicrophonepermission-promisepermissionresponse)
+- [In-App Recording](#in-app-recording)
+  - [`startInAppRecording()`](#startinapprecordinginput-promisevoid)
+  - [`stopInAppRecording()`](#stopinapprecording-promisescreenrecordingfile--undefined)
+  - [`cancelInAppRecording()`](#cancelinapprecording-promisevoid)
+- [Global Recording](#global-recording)
+  - [`startGlobalRecording()`](#startglobalrecordinginput-void)
+  - [`stopGlobalRecording()`](#stopglobalrecording-promisescreenrecordingfile--undefined)
+  - [`retrieveLastGlobalRecording()`](#retrievelastglobalrecording-screenrecordingfile--undefined)
+- [Event Listeners](#event-listeners)
+  - [`addScreenRecordingListener()`](#addscreenrecordinglistenerlistener-number)
+  - [`removeScreenRecordingListener(id): void`](#removescreenrecordinglistenerid-void)
+- [Utilities](#utilities)
+  - [`clearRecordingCache()`](#clearrecordingcache-void)
 
 ## React Hooks
 
@@ -376,6 +387,7 @@ Returns whether the user has granted permission to use the Camera, or not. If th
 **Returns:** Object with `hasPermission` boolean and `requestPermission` function
 
 **Example:**
+
 ```tsx
 import { useCameraPermission } from 'react-native-nitro-screen-recorder';
 
@@ -397,10 +409,12 @@ Returns whether the user has granted permission to use the Microphone, or not. I
 **Returns:** Object with `hasPermission` boolean and `requestPermission` function
 
 **Example:**
+
 ```tsx
 import { useMicrophonePermission } from 'react-native-nitro-screen-recorder';
 
-const { hasPermission: canRecordAudio, requestPermission } = useMicrophonePermission();
+const { hasPermission: canRecordAudio, requestPermission } =
+  useMicrophonePermission();
 
 // Use in recording configuration
 const recordingOptions = {
@@ -417,15 +431,18 @@ React hook for monitoring and responding to global screen recording events.
 **Platform:** iOS, Android
 
 **Parameters:**
+
 - `onRecordingStarted?: () => void` — Called when a global recording begins.
 - `onRecordingFinished?: (file?: ScreenRecordingFile) => void` — Called after recording ends (with a delay to allow the file to settle).
 - `onBroadcastPickerShown?: () => void` — Called when the broadcast picker on ios is shown.
 - `onBroadcastPickerDismissed?: () => void` — Called with the broadcast picker on ios is dismissed.
+- `ignoreRecordingsInitiatedElsewhere?: boolean - `iOS-only`allows the listener to only callback when the`startGlobalRecording` is called.
 - `settledTimeMs?: number` — Milliseconds to wait after recording end before attempting to retrieve the file. Defaults to 500.
 
 **Returns:** `{ isRecording: boolean }` — whether a global recording is currently active.
 
 **Example:**
+
 ```tsx
 import { useGlobalRecording } from 'react-native-nitro-screen-recorder';
 
@@ -437,11 +454,12 @@ const { isRecording } = useGlobalRecording({
     }
   },
   onBroadcastPickerShown: () => {
-    console.log("Perform some action")
+    console.log('Perform some action');
   },
   onBroadcastPickerDismissed: () => {
-    console.log("Perform some other action")
+    console.log('Perform some other action');
   },
+  ignoreRecordingsInitiatedElsewhere: false,
   settledTimeMs: 600,
 });
 ```
@@ -457,6 +475,7 @@ Gets the current camera permission status without requesting permission.
 **Returns:** The current permission status for camera access
 
 **Example:**
+
 ```ts
 import { getCameraPermissionStatus } from 'react-native-nitro-screen-recorder';
 
@@ -475,6 +494,7 @@ Gets the current microphone permission status without requesting permission.
 **Returns:** The current permission status for microphone access
 
 **Example:**
+
 ```ts
 import { getMicrophonePermissionStatus } from 'react-native-nitro-screen-recorder';
 
@@ -493,6 +513,7 @@ Requests camera permission from the user if not already granted. Shows the syste
 **Returns:** Promise that resolves with the permission response
 
 **Example:**
+
 ```ts
 import { requestCameraPermission } from 'react-native-nitro-screen-recorder';
 
@@ -511,6 +532,7 @@ Requests microphone permission from the user if not already granted. Shows the s
 **Returns:** Promise that resolves with the permission response
 
 **Example:**
+
 ```ts
 import { requestMicrophonePermission } from 'react-native-nitro-screen-recorder';
 
@@ -529,24 +551,26 @@ Starts in-app screen recording with the specified configuration. Records only th
 **Platform:** iOS only
 
 **Parameters:**
--   `enableMic`: boolean - Whether to enable microphone audio
--   `enableCamera`: boolean - Whether to enable camera overlay
--   `cameraPreviewStyle`: RecorderCameraStyle - Camera positioning and styling
--   `cameraDevice`: CameraDevice - Front or back camera
--   `onRecordingFinished`: (file: ScreenRecordingFile) => void - Callback when recording completes
+
+- `enableMic`: boolean - Whether to enable microphone audio
+- `enableCamera`: boolean - Whether to enable camera overlay
+- `cameraPreviewStyle`: RecorderCameraStyle - Camera positioning and styling
+- `cameraDevice`: CameraDevice - Front or back camera
+- `onRecordingFinished`: (file: ScreenRecordingFile) => void - Callback when recording completes
 
 **Example:**
+
 ```ts
 import { startInAppRecording } from 'react-native-nitro-screen-recorder';
 
 await startInAppRecording({
   enableMic: true,
-  enableCamera: true, 
-  cameraPreviewStyle: { width: 100, height: 150, top: 30, left: 10 }, 
+  enableCamera: true,
+  cameraPreviewStyle: { width: 100, height: 150, top: 30, left: 10 },
   cameraDevice: 'front',
   onRecordingFinished: (file) => {
     console.log('Recording saved:', file.path);
-  }
+  },
 });
 ```
 
@@ -559,6 +583,7 @@ Stops the current in-app recording and returns the recorded video file. The reco
 **Returns:** Promise that resolves with the recording file or undefined if no recording was active
 
 **Example:**
+
 ```ts
 import { stopInAppRecording } from 'react-native-nitro-screen-recorder';
 
@@ -575,6 +600,7 @@ Cancels the current in-app recording without saving the video. No file will be g
 **Platform:** iOS only
 
 **Example:**
+
 ```ts
 import { cancelInAppRecording } from 'react-native-nitro-screen-recorder';
 
@@ -590,13 +616,16 @@ Starts global screen recording that captures the entire device screen. Records s
 **Platform:** iOS, Android
 
 **Parameters:**
--   `enableMic`: boolean - Whether to enable microphone audio
--   `onRecordingError`: (error: RecordingError) => void - Error callback
+
+- `enableMic`: boolean - Whether to enable microphone audio
+- `onRecordingError`: (error: RecordingError) => void - Error callback
 
 **Throws:**
--   `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
+
+- `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
 
 **Example:**
+
 ```ts
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
@@ -604,7 +633,7 @@ startGlobalRecording({
   enableMic: true, // enableMic
   onRecordingError: (error) => {
     console.error('Global recording error:', error.message);
-  }
+  },
 });
 ```
 
@@ -615,9 +644,11 @@ Stops the current global screen recording and returns the saved video file. Beca
 **Platform:** iOS, Android
 
 **Parameters:**
+
 - `options.settledTimeMs?: number` — Milliseconds to wait after the broadcast ends before attempting to retrieve the file. Defaults to 500.
 
 **Example:**
+
 ```ts
 import { stopGlobalRecording } from 'react-native-nitro-screen-recorder';
 
@@ -636,6 +667,7 @@ Retrieves the most recently completed global recording file. Returns undefined i
 **Returns:** The last global recording file or undefined if none exists
 
 **Example:**
+
 ```ts
 import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
 
@@ -655,18 +687,24 @@ Adds a listener for screen recording events (began, ended, etc.). Returns a clea
 **Platform:** iOS, Android
 
 **Parameters:**
--   `listener`: Callback function that receives screen recording events
+
+- `listener`: Callback function that receives screen recording events
+- `ignoreRecordingsInitiatedElsewhere?: boolean - `iOS-only` allows the listener to only callback when the`startGlobalRecording` is called.
 
 **Returns:** Cleanup function to remove the listener
 
 **Example:**
+
 ```ts
 import { useEffect } from 'react';
 import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
 
 useEffect(() => {
-  const removeListener = addScreenRecordingListener((event) => {
-    console.log("Event type:", event.type, "Event reason:", event.reason);
+  const removeListener = addScreenRecordingListener({
+    ignoreRecordingsInitiatedElsewhere: false,
+    listener: (event) => {
+      console.log('Event type:', event.type, 'Event reason:', event.reason);
+    },
   });
 
   // Clean up listener when component unmounts
@@ -681,25 +719,29 @@ Adds a listener for iOS broadcast picker status changes (showing & dismissed). R
 **Platform:** iOS only (returns no-op cleanup function on Android)
 
 **Parameters:**
--   `listener`: Callback function that receives broadcast picker presentation events
+
+- `listener`: Callback function that receives broadcast picker presentation events
 
 **Returns:** Cleanup function to remove the listener
 
 **Example:**
+
 ```ts
 import { useEffect } from 'react';
 import { addBroadcastPickerListener } from 'react-native-nitro-screen-recorder';
 
 useEffect(() => {
   const removeListener = addBroadcastPickerListener((event) => {
-    console.log("Picker status:", event);
-    
+    console.log('Picker status:', event);
+
     switch (event) {
       case 'showing':
-        console.log("Broadcast picker is showing");
+        console.log('Broadcast picker is showing');
         break;
       case 'dismissed':
-        console.log("Broadcast picker was dismissed without starting recording");
+        console.log(
+          'Broadcast picker was dismissed without starting recording'
+        );
         break;
     }
   });
@@ -710,6 +752,7 @@ useEffect(() => {
 ```
 
 **Event Types:**
+
 - `showing`: The broadcast picker modal is displayed to the user
 - `dismissed`: The broadcast modal was dismissed without starting recording
 
@@ -722,6 +765,7 @@ Clears all cached recording files to free up storage space. This will delete tem
 **Platform:** iOS, Android
 
 **Example:**
+
 ```ts
 import { clearRecordingCache } from 'react-native-nitro-screen-recorder';
 
@@ -795,16 +839,18 @@ export interface RecordingError {
 ## Platform Differences
 
 ### iOS
--   **In-App Recording**: Full support with camera overlay
--   **Global Recording**: Full programmatic control including start and stop functionality
--   **Permissions**: Camera and microphone permissions handled automatically
--   **App Extensions**: Uses broadcast extensions for global recording
+
+- **In-App Recording**: Full support with camera overlay
+- **Global Recording**: Full programmatic control including start and stop functionality
+- **Permissions**: Camera and microphone permissions handled automatically
+- **App Extensions**: Uses broadcast extensions for global recording
 
 ### Android
--   **In-App Recording**: Not supported (use global recording instead)
--   **Global Recording**: Full programmatic control including stop functionality
--   **Permissions**: Microphone permission required for audio recording
--   **Media Projection**: Uses Android's MediaProjection API
+
+- **In-App Recording**: Not supported (use global recording instead)
+- **Global Recording**: Full programmatic control including stop functionality
+- **Permissions**: Microphone permission required for audio recording
+- **Media Projection**: Uses Android's MediaProjection API
 
 ## Contributing
 
