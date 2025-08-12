@@ -1,4 +1,10 @@
 # Changelog
+## [0.3.2] - 2025-08-12
+### Changes
+- Fix expo plugin typescript
+- Close #7 - ignore external screen recording property to the useGlobalRecording hook
+- Bump nitro modules to 0.27.6 (latest)
+
 ## [0.2.8] - 2025-08-02
 ### Feat
 - Allow custom iosBundleIdentifier for BroadcastExtension
