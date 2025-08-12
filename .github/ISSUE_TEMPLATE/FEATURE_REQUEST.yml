@@ -5,54 +5,31 @@ labels: [✨ feature]
 body:
   - type: textarea
     attributes:
-      label: What feature or enhancement are you suggesting?
-      description: Explain what feature or enhancement you're proposing for react-native-nitro-screen-recorder, why it's useful, what problem it solves, and any trade-offs.
-      placeholder: I think it would be great to support automatic upload of finalized recordings to S3 with retry logic.
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
-      label: What platform(s) does this affect?
-      options:
-        - iOS
-        - Android
-        - Both
-        - Other
-      description: Select the platform(s) where this feature would apply.
+      label: Feature Description
+      description: Describe the feature you'd like to see added and why it would be useful.
+      placeholder: I'd like automatic upload of recordings to cloud storage with retry logic because...
     validations:
       required: true
   - type: textarea
     attributes:
-      label: How do you plan to use this feature?
-      description: Describe your use case or workflow so maintainers can understand the context and prioritize accordingly.
-      placeholder: |
-        I want to automatically start global recording when the user enters a certain screen and upload after stop.
-    validations:
-      required: false
-  - type: textarea
-    attributes:
-      label: Reproducible Code
+      label: Proposed API (optional)
       description: >
-        Share a minimal reproducible code snippet showing how you would use the existing APIs (e.g., startGlobalRecording, stopGlobalRecording, or useGlobalRecording)
-        and what you'd like to change or augment. No need for backticks; it will be formatted automatically.
+        Show how you'd like to use this feature with a code example.
       render: tsx
       placeholder: |
-        // Example using the hook
-        const { isRecording } = useGlobalRecording({
-          onRecordingFinished: (file) => {
-            // ...
-          },
+        // Example usage
+        const { startRecording } = useGlobalRecording({
+          autoUpload: {
+            provider: 'aws-s3',
+            bucket: 'my-recordings',
+            onSuccess: (url) => console.log('Uploaded:', url)
+          }
         });
     validations:
       required: false
   - type: checkboxes
     attributes:
-      label: Additional information
-      description: Please check all the boxes that apply
+      label: Confirmation
       options:
-        - label: I am using Expo with the config plugin
-        - label: I am using the bare workflow (manual native setup)
-        - label: I have read the [Troubleshooting Guide](https://github.com/margelo/react-native-nitro-screen-recorder/blob/main/docs/troubleshooting.md)
-        - label: I agree to follow this project's [Code of Conduct](https://github.com/margelo/react-native-nitro-screen-recorder/blob/main/CODE_OF_CONDUCT.md)
         - label: I searched for similar feature requests and found none
           required: true
