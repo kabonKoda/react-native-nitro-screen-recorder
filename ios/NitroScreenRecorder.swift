@@ -522,6 +522,7 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
       // Reflect intent locally.
       self.isGlobalRecordingActive = false
+      self.globalRecordingInitiatedByThisPackage = false
 
       // Wait for the specified settle time to allow the broadcast to finish writing the file.
       let settleTimeNanoseconds = UInt64(settledTimeMs * 1_000_000)  // Convert ms to nanoseconds
