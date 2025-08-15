@@ -3,11 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import {
-  BROADCAST_EXT_TARGET_NAME,
-  BROADCAST_EXT_ALL_FILES,
+  getBroadcastExtensionTargetName,
   DEFAULT_BUNDLE_VERSION,
   DEFAULT_BUNDLE_SHORT_VERSION,
   getAppGroup,
+  BROADCAST_EXT_ALL_FILES,
 } from '../support/iosConstants';
 import { FileManager } from '../support/FileManager';
 import BEUpdaterManager from '../support/BEUpdateManager';
@@ -28,7 +28,7 @@ export const withBroadcastExtensionFiles: ConfigPlugin<ConfigProps> = (
     'ios',
     async (mod) => {
       const iosPath = path.join(mod.modRequest.projectRoot, 'ios');
-
+      const targetName = getBroadcastExtensionTargetName(props);
       const sourceDir = path.join(
         __dirname,
         '..',
@@ -36,26 +36,26 @@ export const withBroadcastExtensionFiles: ConfigPlugin<ConfigProps> = (
         'broadcastExtensionFiles'
       );
 
-      fs.mkdirSync(`${iosPath}/${BROADCAST_EXT_TARGET_NAME}`, {
+      fs.mkdirSync(`${iosPath}/${targetName}`, {
         recursive: true,
       });
 
       for (const extFile of BROADCAST_EXT_ALL_FILES) {
-        const targetFile = `${iosPath}/${BROADCAST_EXT_TARGET_NAME}/${extFile}`;
+        const targetFile = `${iosPath}/${targetName}/${extFile}`;
         await FileManager.copyFile(`${sourceDir}/${extFile}`, targetFile);
       }
 
       const sourceSamplePath = `${sourceDir}/${SAMPLE_HANDLER_FILE}`;
-      const targetSamplePath = `${iosPath}/${BROADCAST_EXT_TARGET_NAME}/${SAMPLE_HANDLER_FILE}`;
+      const targetSamplePath = `${iosPath}/${targetName}/${SAMPLE_HANDLER_FILE}`;
       await FileManager.copyFile(sourceSamplePath, targetSamplePath);
 
       ScreenRecorderLog.log(
-        `Copied broadcast extension files to ${iosPath}/${BROADCAST_EXT_TARGET_NAME}`
+        `Copied broadcast extension files to ${iosPath}/${targetName}`
       );
       /* ------------------------------------------------------------ */
       /* 2️⃣  Patch entitlements & Info.plist placeholders              */
       /* ------------------------------------------------------------ */
-      const updater = new BEUpdaterManager(iosPath);
+      const updater = new BEUpdaterManager(iosPath, props);
       const mainAppBundleId = mod.ios?.bundleIdentifier;
       if (!mainAppBundleId) {
         throw new Error('Failed to find main app bundle id!');

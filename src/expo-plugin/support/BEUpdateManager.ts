@@ -1,20 +1,24 @@
+import { ConfigProps } from '../@types';
 import { FileManager } from './FileManager';
 import {
   BUNDLE_SHORT_VERSION_TEMPLATE_REGEX,
   BUNDLE_VERSION_TEMPLATE_REGEX,
+  getBroadcastExtensionTargetName,
   GROUP_IDENTIFIER_TEMPLATE_REGEX,
-  BROADCAST_EXT_TARGET_NAME,
 } from './iosConstants';
 
 // project `ios/${BROADCAST_EXT_TARGET_NAME}` directory
-const entitlementsFileName = `${BROADCAST_EXT_TARGET_NAME}.entitlements`;
-const plistFileName = `${BROADCAST_EXT_TARGET_NAME}-Info.plist`;
+const entitlementsFileName = `BroadcastExtension.entitlements`;
+const plistFileName = `BroadcastExtension-Info.plist`;
 
 export default class BEUpdaterManager {
   private extensionPath = '';
+  private extensionTargetName = '';
 
-  constructor(iosPath: string) {
-    this.extensionPath = `${iosPath}/${BROADCAST_EXT_TARGET_NAME}`;
+  constructor(iosPath: string, props: ConfigProps) {
+    const targetName = getBroadcastExtensionTargetName(props);
+    this.extensionTargetName = targetName;
+    this.extensionPath = `${iosPath}/${targetName}`;
   }
 
   /**

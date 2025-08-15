@@ -44,7 +44,8 @@
           "cameraPermissionText": "ScreenRecorder needs access to your Camera.",
           "enableMicrophonePermission": true,
           "microphonePermissionText": "ScreenRecorder needs access to your Microphone.",
-          "showPluginLogs": true
+          "showPluginLogs": true,
+          "iosBroadcastExtensionTargetName": "ScreenRecorder"
         }
       ]
     ]

@@ -1,12 +1,12 @@
 import { ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
 import {
-  BROADCAST_EXT_TARGET_NAME,
   BROADCAST_EXT_SOURCE_FILES,
-  BROADCAST_EXT_CONFIG_FILES,
   TARGETED_DEVICE_FAMILY,
   DEFAULT_BUNDLE_VERSION,
   DEFAULT_BUNDLE_SHORT_VERSION,
   getBroadcastExtensionBundleIdentifier,
+  getBroadcastExtensionTargetName,
+  BROADCAST_EXT_ALL_FILES,
 } from '../support/iosConstants';
 import { ConfigProps } from '../@types';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
@@ -58,6 +58,7 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
 ) => {
   return withXcodeProject(config, (newConfig) => {
     const xcodeProject = newConfig.modResults;
+    const extensionTargetName = getBroadcastExtensionTargetName(props);
 
     const appIdentifier = newConfig.ios?.bundleIdentifier;
     assert(appIdentifier, "Missing 'ios.bundleIdentifier' in app config");
@@ -79,23 +80,21 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
     /* ------------------------------------------------------------------ */
     /* 1. Bail out early if target/group already exist                    */
     /* ------------------------------------------------------------------ */
-    const existingTarget = xcodeProject.pbxTargetByName(
-      BROADCAST_EXT_TARGET_NAME
-    );
+    const existingTarget = xcodeProject.pbxTargetByName(extensionTargetName);
     if (existingTarget) {
       ScreenRecorderLog.log(
-        `${BROADCAST_EXT_TARGET_NAME} already exists in project. Skipping…`
+        `${extensionTargetName} already exists in project. Skipping…`
       );
       return newConfig;
     }
 
     const existingGroups = xcodeProject.hash.project.objects.PBXGroup;
     const groupExists = Object.values(existingGroups).some(
-      (group: any) => group && group.name === BROADCAST_EXT_TARGET_NAME
+      (group: any) => group && group.name === extensionTargetName
     );
     if (groupExists) {
       ScreenRecorderLog.log(
-        `${BROADCAST_EXT_TARGET_NAME} group already exists in project. Skipping…`
+        `${extensionTargetName} group already exists in project. Skipping…`
       );
       return newConfig;
     }
@@ -104,12 +103,11 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
     /* 2. Create target, group & build phases (COMBINED APPROACH)        */
     /* ------------------------------------------------------------------ */
     const pbx = xcodeProject;
-
     // 2.1 Create PBXGroup for the extension (OneSignal style - single group creation)
     const extGroup = pbx.addPbxGroup(
-      [...BROADCAST_EXT_SOURCE_FILES, ...BROADCAST_EXT_CONFIG_FILES],
-      BROADCAST_EXT_TARGET_NAME,
-      BROADCAST_EXT_TARGET_NAME
+      BROADCAST_EXT_ALL_FILES,
+      extensionTargetName,
+      extensionTargetName
     );
 
     // 2.2 Add the new PBXGroup to the top level group
@@ -132,9 +130,9 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
 
     // 2.4 Create native target
     const target = pbx.addTarget(
-      BROADCAST_EXT_TARGET_NAME,
+      extensionTargetName,
       'app_extension',
-      BROADCAST_EXT_TARGET_NAME
+      extensionTargetName
     );
 
     // 2.5 Add build phases to the new target (OneSignal approach)
@@ -162,10 +160,10 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
       const cfg = configurations[key];
       const b = cfg.buildSettings;
       if (!b) continue;
-      if (b.PRODUCT_NAME === `"${BROADCAST_EXT_TARGET_NAME}"`) {
+      if (b.PRODUCT_NAME === `"${extensionTargetName}"`) {
         b.CLANG_ENABLE_MODULES = 'YES';
-        b.INFOPLIST_FILE = `"${BROADCAST_EXT_TARGET_NAME}/${BROADCAST_EXT_TARGET_NAME}-Info.plist"`;
-        b.CODE_SIGN_ENTITLEMENTS = `"${BROADCAST_EXT_TARGET_NAME}/${BROADCAST_EXT_TARGET_NAME}.entitlements"`;
+        b.INFOPLIST_FILE = `"${extensionTargetName}/BroadcastExtension-Info.plist"`;
+        b.CODE_SIGN_ENTITLEMENTS = `"${extensionTargetName}/BroadcastExtension.entitlements"`;
         b.CODE_SIGN_STYLE = 'Automatic';
         b.CURRENT_PROJECT_VERSION =
           newConfig.ios?.buildNumber ?? DEFAULT_BUNDLE_VERSION;
@@ -173,8 +171,8 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
         b.PRODUCT_BUNDLE_IDENTIFIER = `"${bundleIdentifier}"`;
         b.SWIFT_VERSION = '5.0';
         b.SWIFT_EMIT_LOC_STRINGS = 'YES';
-        b.SWIFT_OBJC_BRIDGING_HEADER = `"${BROADCAST_EXT_TARGET_NAME}/BroadcastExtension-Bridging-Header.h"`;
-        b.HEADER_SEARCH_PATHS = `"$(SRCROOT)/${BROADCAST_EXT_TARGET_NAME}"`;
+        b.SWIFT_OBJC_BRIDGING_HEADER = `"${extensionTargetName}/BroadcastExtension-Bridging-Header.h"`;
+        b.HEADER_SEARCH_PATHS = `"$(SRCROOT)/${extensionTargetName}"`;
         b.TARGETED_DEVICE_FAMILY = TARGETED_DEVICE_FAMILY;
         if (devTeam) b.DEVELOPMENT_TEAM = devTeam;
       }
@@ -185,9 +183,7 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
     /* ------------------------------------------------------------------ */
     if (devTeam) {
       xcodeProject.addTargetAttribute('DevelopmentTeam', devTeam);
-      const broadcastTarget = xcodeProject.pbxTargetByName(
-        BROADCAST_EXT_TARGET_NAME
-      );
+      const broadcastTarget = xcodeProject.pbxTargetByName(extensionTargetName);
       xcodeProject.addTargetAttribute(
         'DevelopmentTeam',
         devTeam,
@@ -196,7 +192,7 @@ export const withBroadcastExtensionXcodeProject: ConfigPlugin<ConfigProps> = (
     }
 
     ScreenRecorderLog.log(
-      `Successfully created ${BROADCAST_EXT_TARGET_NAME} target with files`
+      `Successfully created ${extensionTargetName} target with files`
     );
     return newConfig;
   });

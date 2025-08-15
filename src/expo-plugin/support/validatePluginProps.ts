@@ -7,8 +7,10 @@ const VALID_PLUGIN_PROP_NAMES: string[] = [
   'cameraPermissionText',
   'enableMicrophonePermission',
   'microphonePermissionText',
-  'disableExperimental',
   'showPluginLogs',
+  'iosBroadcastExtensionTargetName',
+  'iosAppGroupIdentifier',
+  'iosExtensionBundleIdentifier',
 ];
 
 /**
@@ -56,17 +58,19 @@ export function validatePluginProps(props: ConfigProps): void {
   }
 
   if (
-    props.disableExperimental !== undefined &&
-    typeof props.disableExperimental !== 'boolean'
-  ) {
-    throw new Error(`${PLUGIN_NAME}: 'disableExperimental' must be a boolean.`);
-  }
-
-  if (
     props.showPluginLogs !== undefined &&
     typeof props.showPluginLogs !== 'boolean'
   ) {
     throw new Error(`${PLUGIN_NAME}: 'showPluginLogs' must be a boolean.`);
+  }
+
+  if (
+    props.iosBroadcastExtensionTargetName !== undefined &&
+    props.iosBroadcastExtensionTargetName.includes(' ')
+  ) {
+    throw new Error(
+      `${PLUGIN_NAME}: 'iosBroadcastExtensionTargetName' cannot have spaces.`
+    );
   }
 
   const invalidKeys = Object.keys(props).filter(

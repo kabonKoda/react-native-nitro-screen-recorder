@@ -36,17 +36,11 @@ export interface ConfigProps {
    * @example "This app needs microphone access to record audio during screen capture"
    */
   microphonePermissionText?: string;
-
   /**
-   * Whether to disable the experimental Expo appExtensions configuration.
-   * When true, skips applying the broadcast extension configuration to the Expo config,
-   * which means the screen recording extension won't be automatically configured.
-   *
-   * @platform iOS
-   * @default false
-   * @example true
+   * Provies a means for customizing the ios broadcast extension target name.
+   * @default: `BroadcastExtension`
    */
-  disableExperimental?: boolean;
+  iosBroadcastExtensionTargetName?: string;
   /**
    * Provies a means for customizing your app group identifier.
    */

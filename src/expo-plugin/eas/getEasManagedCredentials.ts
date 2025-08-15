@@ -1,8 +1,8 @@
 import { ConfigProps } from '../@types';
 import {
-  BE_TARGET_NAME,
   getAppGroup,
   getBroadcastExtensionBundleIdentifier,
+  getBroadcastExtensionTargetName,
 } from '../support/iosConstants';
 import { ExpoConfig } from '@expo/config-types';
 import assert from 'assert';
@@ -18,6 +18,7 @@ export default function getEasManagedCredentialsConfigExtra(
       "Missing 'ios.bundleIdentifier' in app config"
     );
   }
+  const extensionTargetName = getBroadcastExtensionTargetName(props);
 
   return {
     ...config.extra,
@@ -33,7 +34,7 @@ export default function getEasManagedCredentialsConfigExtra(
               ...(config.extra?.eas?.build?.experimental?.ios?.appExtensions ??
                 []),
               {
-                targetName: BE_TARGET_NAME,
+                targetName: extensionTargetName,
                 bundleIdentifier: getBroadcastExtensionBundleIdentifier(
                   config?.ios?.bundleIdentifier!,
                   props
