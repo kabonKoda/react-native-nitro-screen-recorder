@@ -1,4 +1,10 @@
 # Changelog
+## [0.3.4] - 2025-08-12
+### Changes
+- Fix expo plugin typescript
+- Allow customizing the screen recorder target name on iOS
+- Bump nitro modules to 0.28.0 (latest)
+
 ## [0.3.2] - 2025-08-12
 ### Changes
 - Fix expo plugin typescript

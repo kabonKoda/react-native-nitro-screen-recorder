@@ -131,8 +131,8 @@ Add the following permissions to your `ios/YourApp/Info.plist`:
 
 ### 4. Configure Extension Files
 
-1.  Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
-2.  Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/expo-plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
+1.  Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
+2.  Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
 3.  Update the following values in `SampleHandler.swift`:
     - Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
     - Replace `<SCHEME>` with your app's custom URL scheme

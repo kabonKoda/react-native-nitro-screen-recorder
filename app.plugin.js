@@ -1,1 +1,1 @@
-module.exports = require('./src/expo-plugin/build/withScreenRecorder.js');
+module.exports = require('./plugin/build');
