@@ -38,7 +38,8 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build",
     "build:types": "tsc --project tsconfig.json",
-    "build:plugin": "mkdir -p plugin/build/support && cp -r plugin/support/broadcastExtensionFiles plugin/build/support && expo-module build plugin",
+    "dev:plugin": "mkdir -p plugin/build/support && cp -r plugin/support/broadcastExtensionFiles plugin/build/support && expo-module build plugin",
+    "build:plugin": "tsc --project tsconfig.json && cp -r plugin/support/broadcastExtensionFiles plugin/build/support/broadcastExtensionFiles",
     "prepare": "bob build && yarn nitrogen && yarn build:plugin",
     "nitrogen": "nitro-codegen",
     "release": "release-it --only-version"
@@ -109,12 +110,12 @@
     "eslint-plugin-prettier": "^5.2.3",
     "expo-module-scripts": "^4.1.9",
     "jest": "^29.7.0",
-    "nitro-codegen": "0.28.0",
+    "nitro-codegen": "0.28.1",
     "prettier": "^3.0.3",
     "react": "19.0.0",
     "react-native": "0.79.2",
     "react-native-builder-bob": "^0.40.12",
-    "react-native-nitro-modules": "0.28.0",
+    "react-native-nitro-modules": "0.28.1",
     "release-it": "^17.10.0",
     "turbo": "^1.10.7",
     "typescript": "^5.8.3"
@@ -122,7 +123,7 @@
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
-    "react-native-nitro-modules": "^0.27.6"
+    "react-native-nitro-modules": "^0.28.1"
   },
   "workspaces": [
     "example"

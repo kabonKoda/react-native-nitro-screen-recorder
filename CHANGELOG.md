@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.5] - 2025-08-25
+### Changes
+- Bump nitro modules to 0.28.1 (latest)
+
 ## [0.3.4] - 2025-08-12
 ### Changes
 - Fix expo plugin typescript
