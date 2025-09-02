@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.6] - 2025-08-25
+### Changes
+- Bump nitro modules to 0.29.2 (latest)
+
 ## [0.3.5] - 2025-08-25
 ### Changes
 - Bump nitro modules to 0.28.1 (latest)
