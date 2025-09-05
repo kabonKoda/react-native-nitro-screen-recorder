@@ -1,4 +1,9 @@
 # Changelog
+## [0.3.7] - 2025-08-25
+### Changes
+- Bump nitro modules to 0.29.3 (latest)
+- Fix Gradle Build error
+
 ## [0.3.6] - 2025-08-25
 ### Changes
 - Bump nitro modules to 0.29.2 (latest)

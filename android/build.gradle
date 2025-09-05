@@ -127,9 +127,3 @@ dependencies {
   implementation project(":react-native-nitro-modules")
 }
 
-afterEvaluate {
-    tasks.named("generateCodegenSchemaFromJavaScript") {
-        dependsOn(":expo-dev-menu:copyAssets")
-    }
-}
-
