@@ -1,4 +1,8 @@
 # Changelog
+## [0.3.8] - 2025-09-8
+### Changes
+- Fix #9, privacyinfo naming conflict with other expo config plugins
+
 ## [0.3.7] - 2025-08-25
 ### Changes
 - Bump nitro modules to 0.29.3 (latest)
