@@ -38,7 +38,7 @@ export const BROADCAST_EXT_SOURCE_FILES = [
 export const BROADCAST_EXT_CONFIG_FILES = [
   `BroadcastExtension-Info.plist`,
   `BroadcastExtension.entitlements`,
-  'PrivacyInfo.xcprivacy',
+  'BroadcastExtension-PrivacyInfo.xcprivacy',
   'BroadcastHelper.h',
   'BroadcastExtension-Bridging-Header.h',
 ];
