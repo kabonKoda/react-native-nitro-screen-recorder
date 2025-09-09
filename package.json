@@ -38,9 +38,9 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build",
     "build:types": "tsc --project tsconfig.json",
-    "dev:plugin": "mkdir -p plugin/build/support && cp -r plugin/support/broadcastExtensionFiles plugin/build/support && expo-module build plugin",
+    "dev:plugin": "mkdir -p plugin/build/support && cp -r plugin/support/broadcastExtensionFiles plugin/build/support/broadcastExtensionFiles && expo-module build plugin",
     "build:plugin": "tsc --project tsconfig.json && cp -r plugin/support/broadcastExtensionFiles plugin/build/support/broadcastExtensionFiles",
-    "prepare": "bob build && yarn nitrogen && yarn build:plugin",
+    "prepare": "bob build && yarn nitrogen && yarn dev:plugin",
     "nitrogen": "nitro-codegen",
     "release": "release-it --only-version"
   },
