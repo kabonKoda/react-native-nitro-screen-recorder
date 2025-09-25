@@ -10,14 +10,14 @@
     "build:ios": "react-native build-ios --mode Debug"
   },
   "dependencies": {
-    "expo": "54.0.0-preview.15",
+    "expo": "54.0.10",
     "expo-dev-client": "~6.0.10",
     "expo-status-bar": "~3.0.7",
     "expo-video": "~3.0.10",
     "expo-video-metadata": "^1.5.0",
     "react": "19.1.0",
-    "react-native": "0.81.1",
-    "react-native-nitro-modules": "^0.29.3"
+    "react-native": "0.81.4",
+    "react-native-nitro-modules": "^0.29.6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
