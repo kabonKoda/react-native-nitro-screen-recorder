@@ -1,5 +1,5 @@
-import { ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
-import { ConfigProps } from '../@types';
+import { type ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
+import { type ConfigProps } from '../@types';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
 
 /**

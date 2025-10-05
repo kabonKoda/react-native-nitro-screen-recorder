@@ -1,4 +1,4 @@
-import { ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
+import { type ConfigPlugin, withXcodeProject } from '@expo/config-plugins';
 import {
   BROADCAST_EXT_SOURCE_FILES,
   TARGETED_DEVICE_FAMILY,
@@ -8,7 +8,7 @@ import {
   getBroadcastExtensionTargetName,
   BROADCAST_EXT_ALL_FILES,
 } from '../support/iosConstants';
-import { ConfigProps } from '../@types';
+import { type ConfigProps } from '../@types';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
 import assert from 'assert';
 //───────────────────────────────────────────────────────────────────────────

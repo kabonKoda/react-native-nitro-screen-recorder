@@ -1,6 +1,6 @@
 import { NitroModules } from 'react-native-nitro-modules';
 import type { NitroScreenRecorder } from './NitroScreenRecorder.nitro';
-import {
+import type {
   ScreenRecordingFile,
   PermissionResponse,
   InAppRecordingInput,

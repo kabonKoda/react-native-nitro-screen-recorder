@@ -1,8 +1,8 @@
 import path from 'path';
-import { ConfigPlugin, withDangerousMod } from '@expo/config-plugins';
+import { type ConfigPlugin, withDangerousMod } from '@expo/config-plugins';
 import { updatePodfile } from '../support/updatePodfile';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
-import { ConfigProps } from '../@types';
+import { type ConfigProps } from '../@types';
 
 export const withBroadcastExtensionPodfile: ConfigPlugin<ConfigProps> = (
   config,

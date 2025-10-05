@@ -1,4 +1,4 @@
-import { ConfigPlugin, withPlugins } from '@expo/config-plugins';
+import { type ConfigPlugin, withPlugins } from '@expo/config-plugins';
 
 // Local helpers / sub‑mods ▶️
 import { withMainAppAppGroupInfoPlist } from './withMainAppAppGroupInfoPlist';

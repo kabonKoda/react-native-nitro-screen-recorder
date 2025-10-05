@@ -1,28 +1,30 @@
 {
-  "extends": "expo-module-scripts/tsconfig.base",
   "compilerOptions": {
-    "allowJs": false,
+    "baseUrl": "./",
+    "paths": {
+      "react-native-nitro-screen-recorder": ["./src/index"]
+    },
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "react-native",
+    "jsx": "react",
     "lib": ["esnext"],
     "module": "esnext",
     "moduleResolution": "node",
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
+    "noImplicitUseStrict": false,
     "noStrictGenericChecks": false,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noUncheckedIndexedAccess": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "esnext",
-    "outDir": "lib",
-    "declaration": true
+    "verbatimModuleSyntax": true,
+    "noEmit": true
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "lib", "example", "plugin"]
+  "exclude": ["node_modules", "lib", "plugin", "example"]
 }

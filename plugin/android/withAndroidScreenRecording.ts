@@ -1,9 +1,9 @@
 import {
-  ConfigPlugin,
+  type ConfigPlugin,
   withAndroidManifest,
   withMainActivity,
 } from '@expo/config-plugins';
-import { ConfigProps } from '../@types';
+import type { ConfigProps } from '../@types';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
 
 export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
@@ -17,10 +17,10 @@ export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
 
     const androidManifest = mod.modResults;
 
-    if (!androidManifest.manifest.application?.length) {
+    if (!androidManifest.manifest.application?.[0]) {
       throw new Error('Cannot find <application> in AndroidManifest.xml');
     }
-    const application = androidManifest.manifest.application![0];
+    const application = androidManifest.manifest.application[0];
 
     if (!application.service) {
       application.service = [];
@@ -29,12 +29,12 @@ export const withAndroidScreenRecording: ConfigPlugin<ConfigProps> = (
     // Add only the Global ScreenRecordingService
     const serviceName =
       'com.margelo.nitro.nitroscreenrecorder.ScreenRecordingService';
-    const existingService = application.service?.find(
+    const existingService = application.service.find(
       (service) => service.$?.['android:name'] === serviceName
     );
 
     if (!existingService) {
-      application.service!.push({
+      application.service.push({
         $: {
           'android:name': serviceName,
           'android:enabled': 'true',
@@ -116,7 +116,7 @@ function addKotlinScreenRecordingSupport(content: string): string {
     const classEndRegex = /(\s*)\}(\s*)$/;
     const match = content.match(classEndRegex);
 
-    if (match) {
+    if (match && match.index !== undefined) {
       const onActivityResultMethod = `
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
@@ -131,7 +131,7 @@ function addKotlinScreenRecordingSupport(content: string): string {
     }
   }
 `;
-      const insertPosition = match.index!;
+      const insertPosition = match.index;
       content =
         content.slice(0, insertPosition) +
         onActivityResultMethod +
@@ -146,7 +146,7 @@ function addKotlinScreenRecordingSupport(content: string): string {
         /(override\s+fun\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
       const match = content.match(onActivityResultRegex);
 
-      if (match) {
+      if (match && match[1] && match[2]) {
         const screenRecordingHandler = `
     
     try {
@@ -204,7 +204,7 @@ function addJavaScreenRecordingSupport(content: string): string {
   if (!content.includes('onActivityResult')) {
     const classEndRegex = /(\s*)\}(\s*)$/;
     const match = content.match(classEndRegex);
-    if (match) {
+    if (match && match.index !== undefined) {
       const onActivityResultMethod = `
   @Override
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -220,7 +220,7 @@ function addJavaScreenRecordingSupport(content: string): string {
     }
   }
 `;
-      const insertPosition = match.index!;
+      const insertPosition = match.index;
       content =
         content.slice(0, insertPosition) +
         onActivityResultMethod +
@@ -234,7 +234,7 @@ function addJavaScreenRecordingSupport(content: string): string {
       const onActivityResultRegex =
         /(@Override\s+public\s+void\s+onActivityResult\s*\([^)]*\)\s*\{[^}]*)(super\.onActivityResult[^}]*)/;
       const match = content.match(onActivityResultRegex);
-      if (match) {
+      if (match && match[1] && match[2]) {
         const screenRecordingHandler = `
     
     try {

@@ -1,12 +1,22 @@
 {
-  "extends": "expo-module-scripts/tsconfig.plugin",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
     "outDir": "./build",
-    "rootDir": "./",
-    "resolveJsonModule": true,
-    "baseUrl": "./",
-    "allowArbitraryExtensions": true
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "composite": false,
+    "module": "commonjs",
+    "target": "es2019",
+    "verbatimModuleSyntax": false
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["build/**/*", "node_modules/**/*", "**/__mocks__/*", "**/__tests__/*", "**/*.d.ts"]
+  "include": [
+    "./**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "**/*.test.ts",
+    "**/__tests__"
+  ]
 }

@@ -6,7 +6,7 @@ import {
 } from './iosConstants';
 import { ScreenRecorderLog } from './ScreenRecorderLog';
 import { FileManager } from './FileManager';
-import { ConfigProps } from '../@types';
+import type { ConfigProps } from '../@types';
 
 export async function updatePodfile(iosPath: string, props: ConfigProps) {
   const podfilePath = `${iosPath}/Podfile`;

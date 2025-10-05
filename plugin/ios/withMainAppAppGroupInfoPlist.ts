@@ -1,5 +1,5 @@
-import { ConfigPlugin, withInfoPlist } from '@expo/config-plugins';
-import { ConfigProps } from '../@types';
+import { type ConfigPlugin, withInfoPlist } from '@expo/config-plugins';
+import type { ConfigProps } from '../@types';
 import { getAppGroup } from '../support/iosConstants';
 import { getBroadcastExtensionBundleIdentifier } from '../support/iosConstants';
 import assert from 'assert';

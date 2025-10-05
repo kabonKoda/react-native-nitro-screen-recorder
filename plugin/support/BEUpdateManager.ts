@@ -1,4 +1,4 @@
-import { ConfigProps } from '../@types';
+import { type ConfigProps } from '../@types';
 import { FileManager } from './FileManager';
 import {
   BUNDLE_SHORT_VERSION_TEMPLATE_REGEX,
@@ -13,11 +13,9 @@ const plistFileName = `BroadcastExtension-Info.plist`;
 
 export default class BEUpdaterManager {
   private extensionPath = '';
-  private extensionTargetName = '';
 
   constructor(iosPath: string, props: ConfigProps) {
     const targetName = getBroadcastExtensionTargetName(props);
-    this.extensionTargetName = targetName;
     this.extensionPath = `${iosPath}/${targetName}`;
   }
 

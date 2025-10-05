@@ -1,4 +1,4 @@
-import { ConfigProps } from '../@types';
+import type { ConfigProps } from '../@types';
 
 const PLUGIN_NAME = 'Nitro Screen Recorder Expo Plugin';
 

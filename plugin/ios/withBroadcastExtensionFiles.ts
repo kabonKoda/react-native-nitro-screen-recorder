@@ -1,4 +1,4 @@
-import { ConfigPlugin, withDangerousMod } from '@expo/config-plugins';
+import { type ConfigPlugin, withDangerousMod } from '@expo/config-plugins';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -12,7 +12,7 @@ import {
 import { FileManager } from '../support/FileManager';
 import BEUpdaterManager from '../support/BEUpdateManager';
 import { ScreenRecorderLog } from '../support/ScreenRecorderLog';
-import { ConfigProps } from '../@types';
+import { type ConfigProps } from '../@types';
 
 const SAMPLE_HANDLER_FILE = 'SampleHandler.swift';
 /**

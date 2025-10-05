@@ -1,10 +1,10 @@
-import { ConfigProps } from '../@types';
+import type { ConfigProps } from '../@types';
 import {
   getAppGroup,
   getBroadcastExtensionBundleIdentifier,
   getBroadcastExtensionTargetName,
 } from '../support/iosConstants';
-import { ExpoConfig } from '@expo/config-types';
+import type { ExpoConfig } from '@expo/config-types';
 import assert from 'assert';
 
 export default function getEasManagedCredentialsConfigExtra(

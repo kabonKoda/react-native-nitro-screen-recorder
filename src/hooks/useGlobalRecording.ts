@@ -4,7 +4,7 @@ import {
   addScreenRecordingListener,
   retrieveLastGlobalRecording,
 } from '../functions';
-import { ScreenRecordingFile } from '../types';
+import type { ScreenRecordingFile } from '../types';
 
 /**
  * A "modern" sleep statement.
