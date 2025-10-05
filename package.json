@@ -7,14 +7,6 @@
   "types": "lib/typescript/index.d.ts",
   "react-native": "src/index",
   "source": "src/index",
-  "exports": {
-    ".": {
-      "import": "./lib/module/index.js",
-      "require": "./lib/commonjs/index.js",
-      "types": "./lib/typescript/index.d.ts"
-    },
-    "./app.plugin.js": "./app.plugin.js"
-  },
   "files": [
     "src",
     "lib",
@@ -44,9 +36,8 @@
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
-    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib plugin/build",
-    "build:types": "tsc --project tsconfig.json",
-    "build:plugin": "rm -rf plugin/build && tsc --project plugin/tsconfig.json && mkdir -p plugin/build/support && cp -r plugin/support/broadcastExtensionFiles plugin/build/support/",
+    "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
+    "build:plugin": "node scripts/build-plugin.js",
     "prepare": "bob build && yarn nitrogen && yarn build:plugin",
     "nitrogen": "nitrogen",
     "release": "release-it --only-version"

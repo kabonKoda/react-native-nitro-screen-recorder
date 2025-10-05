@@ -9,7 +9,7 @@ import { withBroadcastExtension } from './ios/withBroadcastExtension';
 import { withAndroidScreenRecording } from './android/withAndroidScreenRecording';
 import { validatePluginProps } from './support/validatePluginProps';
 
-const pkg = require('../../package.json');
+const pkg = require('../package.json');
 
 const CAMERA_USAGE = 'Allow $(PRODUCT_NAME) to access your camera';
 const MICROPHONE_USAGE = 'Allow $(PRODUCT_NAME) to access your microphone';

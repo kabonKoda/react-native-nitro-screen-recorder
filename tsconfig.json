@@ -26,5 +26,5 @@
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "exclude": ["node_modules", "lib", "plugin", "example"]
+  "exclude": ["node_modules", "lib", "expo-plugin", "example"]
 }

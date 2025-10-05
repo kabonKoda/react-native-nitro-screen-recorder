@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../lib/typescript/expo-plugin",
+    "declaration": true,
+    "declarationMap": true,
+    "noEmit": false,
+    "target": "es2019",
+    "module": "esnext",
+    "verbatimModuleSyntax": false,
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "support", "**/*.test.ts", "**/__tests__"]
+}
