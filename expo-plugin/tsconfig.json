@@ -3,13 +3,15 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "../lib/typescript/expo-plugin",
-    "declaration": true,
-    "declarationMap": true,
-    "noEmit": false,
     "target": "es2019",
-    "module": "esnext",
+    "module": "commonjs",
     "verbatimModuleSyntax": false,
-    "skipLibCheck": true
+    "declaration": true,
+    "declarationMap": false,
+    "noEmit": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "moduleResolution": "node"
   },
   "include": ["**/*.ts"],
   "exclude": ["node_modules", "support", "**/*.test.ts", "**/__tests__"]
