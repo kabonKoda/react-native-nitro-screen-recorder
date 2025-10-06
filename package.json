@@ -18,7 +18,6 @@
     "*.podspec",
     "react-native.config.js",
     "app.plugin.js",
-    "!expo-plugin",
     "!ios/build",
     "!android/build",
     "!android/gradle",
