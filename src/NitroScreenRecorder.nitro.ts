@@ -9,6 +9,7 @@ import type {
   RecordingError,
   BroadcastPickerPresentationEvent,
   ScreenFrame,
+  FrameStreamConfig,
 } from './types';
 
 /**
@@ -86,7 +87,8 @@ export interface NitroScreenRecorder
   // FRAME STREAMING
   // ============================================================================
 
-  enableFrameStreaming(enabled: boolean): void;
+  enableFrameStreaming(config: FrameStreamConfig): void;
+  disableFrameStreaming(): void;
 
   // ============================================================================
   // UTILITIES

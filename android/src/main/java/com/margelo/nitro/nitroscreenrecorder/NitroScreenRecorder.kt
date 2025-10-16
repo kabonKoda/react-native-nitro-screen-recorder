@@ -156,10 +156,11 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
     Log.d(TAG, "🗑️ Removed frame listener with ID: $id, remaining: ${frameListeners.size}")
   }
 
-  override fun enableFrameStreaming(maxFps: Double) {
+  override fun enableFrameStreaming(config: FrameStreamConfig) {
     val ctx = NitroModules.applicationContext ?: throw Error("NO_CONTEXT")
-    globalRecordingService?.enableFrameStreaming(maxFps.toInt())
-    Log.d(TAG, "📹 Frame streaming enabled with maxFps: $maxFps")
+    val maxFps = config.frameRate?.toInt() ?: 30
+    globalRecordingService?.enableFrameStreaming(maxFps)
+    Log.d(TAG, "📹 Frame streaming enabled with config: frameRate=$maxFps, downscaleFactor=${config.downscaleFactor}, quality=${config.quality}")
   }
 
   override fun disableFrameStreaming() {
