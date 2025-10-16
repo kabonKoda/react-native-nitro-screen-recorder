@@ -293,6 +293,16 @@ export interface ScreenRecordingEvent {
 export type BroadcastPickerPresentationEvent = 'showing' | 'dismissed';
 
 /**
+ * Pixel format types supported for frame data.
+ *
+ * @example
+ * ```typescript
+ * const format: PixelFormat = 'RGBA';
+ * ```
+ */
+export type PixelFormat = 'RGBA' | 'BGRA' | 'RGB' | 'YUV';
+
+/**
  * Represents a single frame captured during screen recording.
  * Contains the raw pixel data and metadata about the frame.
  *
@@ -317,7 +327,7 @@ export interface ScreenFrame {
   /** Timestamp in milliseconds since recording started */
   timestamp: number;
   /** Pixel format of the frame data */
-  format: 'RGBA' | 'BGRA' | 'RGB' | 'YUV';
+  format: PixelFormat;
 }
 
 /**
