@@ -1,5 +1,5 @@
 {
-  "name": "react-native-nitro-screen-recorder-example",
+  "name": "rn-nitro-screen-recorder-example",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -18,7 +18,7 @@
     "react": "19.1.0",
     "react-native": "0.81.4",
     "react-native-nitro-modules": "^0.29.8",
-    "react-native-nitro-screen-recorder": "*"
+    "rn-nitro-screen-recorder": "*"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

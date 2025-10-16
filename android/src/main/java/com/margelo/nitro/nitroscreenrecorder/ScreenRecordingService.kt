@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.margelo.nitro.core.*
 import com.margelo.nitro.nitroscreenrecorder.utils.RecorderUtils
 import java.io.File
 
@@ -423,7 +424,9 @@ class ScreenRecordingService : Service() {
         
         // Create ArrayBuffer from bytes
         val arrayBuffer = ArrayBuffer.allocate(size)
-        arrayBuffer.write(bytes)
+        val byteBuffer = arrayBuffer.getBuffer(false)
+        byteBuffer.put(bytes)
+        byteBuffer.rewind()
         
         // Create ScreenFrame object with correct parameters
         val frame = ScreenFrame(

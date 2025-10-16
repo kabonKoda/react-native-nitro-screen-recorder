@@ -30,7 +30,7 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace react-native-nitro-screen-recorder-example",
+    "example": "yarn workspace rn-nitro-screen-recorder-example",
     "test": "jest",
     "typecheck": "tsc",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
@@ -44,7 +44,7 @@
     "react-native",
     "ios",
     "android",
-    "react-native-nitro-screen-recorder",
+    "rn-nitro-screen-recorder",
     "nitro-screen-recorder",
     "nitro",
     "screen-recording",
@@ -75,14 +75,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ChristopherGabba/react-native-nitro-screen-recorder.git"
+    "url": "git+https://github.com/kabonKoda/react-native-nitro-screen-recorder.git"
   },
-  "author": "ChristopherGabba <chrisgabba2005@yahoo.com> (https://github.com/ChristopherGabba)",
+  "author": "Adeyeye Oluwatobiloba <adeydami8624@gmail.com> (https://github.com/kabonKoda)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ChristopherGabba/react-native-nitro-screen-recorder/issues"
+    "url": "https://github.com/kabonKoda/react-native-nitro-screen-recorder/issues"
   },
-  "homepage": "https://github.com/ChristopherGabba/react-native-nitro-screen-recorder#readme",
+  "homepage": "https://github.com/kabonKoda/react-native-nitro-screen-recorder#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },

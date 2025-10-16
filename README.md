@@ -1,6 +1,8 @@
 ![React Native Nitro Screen Recorder](./banner.jpg)
 
-# react-native-nitro-screen-recorder
+# rn-nitro-screen-recorder
+
+> **Note:** This is a fork of [react-native-nitro-screen-recorder](https://github.com/ChristopherGabba/react-native-nitro-screen-recorder) by ChristopherGabba.
 
 > ⚠️ This package is currently in alpha and under active development. Please report any issues that you run across on either platform.
 
@@ -28,13 +30,13 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 Using npm:
 
 ```sh
-npm install react-native-nitro-screen-recorder react-native-nitro-modules
+npm install rn-nitro-screen-recorder react-native-nitro-modules
 ```
 
 Using yarn:
 
 ```sh
-yarn add react-native-nitro-screen-recorder react-native-nitro-modules
+yarn add rn-nitro-screen-recorder react-native-nitro-modules
 ```
 
 > `react-native-nitro-modules` is required as this library relies on [Nitro Modules](https://nitro.margelo.com/).
@@ -53,7 +55,7 @@ export default {
   expo: {
     plugins: [
       [
-        'react-native-nitro-screen-recorder',
+        'rn-nitro-screen-recorder',
         {
           enableCameraPermission: true,
           cameraPermissionText:
@@ -131,8 +133,8 @@ Add the following permissions to your `ios/YourApp/Info.plist`:
 
 ### 4. Configure Extension Files
 
-1.  Copy `SampleHandler.swift` from `node_modules/react-native-nitro-screen-recorder/plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
-2.  Copy `BroadcastWriter.swift` from `node_modules/react-native-nitro-screen-recorder/plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
+1.  Copy `SampleHandler.swift` from `node_modules/rn-nitro-screen-recorder/plugin/src/ios/SampleHandler.swift` to your `BroadcastExtension/` folder
+2.  Copy `BroadcastWriter.swift` from `node_modules/rn-nitro-screen-recorder/plugin/src/ios/BroadcastWriter.swift` to your `BroadcastExtension/` folder
 3.  Update the following values in `SampleHandler.swift`:
     - Replace `<GROUPIDENTIFIER>` with your app group identifier (e.g., `group.com.yourcompany.yourapp.screenrecording`)
     - Replace `<SCHEME>` with your app's custom URL scheme
@@ -284,7 +286,7 @@ import {
   useMicrophonePermission,
   startGlobalRecording,
   stopGlobalRecording,
-} from 'react-native-nitro-screen-recorder';
+} from 'rn-nitro-screen-recorder';
 
 export default function ScreenRecorderExample() {
   const { hasPermission, requestPermission } = useMicrophonePermission();
@@ -391,7 +393,7 @@ Returns whether the user has granted permission to use the Camera, or not. If th
 **Example:**
 
 ```tsx
-import { useCameraPermission } from 'react-native-nitro-screen-recorder';
+import { useCameraPermission } from 'rn-nitro-screen-recorder';
 
 const { hasPermission, requestPermission } = useCameraPermission();
 
@@ -413,7 +415,7 @@ Returns whether the user has granted permission to use the Microphone, or not. I
 **Example:**
 
 ```tsx
-import { useMicrophonePermission } from 'react-native-nitro-screen-recorder';
+import { useMicrophonePermission } from 'rn-nitro-screen-recorder';
 
 const { hasPermission: canRecordAudio, requestPermission } =
   useMicrophonePermission();
@@ -450,7 +452,7 @@ React hook for monitoring and responding to global screen recording events.
 **Example:**
 
 ```tsx
-import { useGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { useGlobalRecording } from 'rn-nitro-screen-recorder';
 
 const { isRecording } = useGlobalRecording({
   onRecordingStarted: () => console.log('started'),
@@ -487,7 +489,7 @@ Gets the current camera permission status without requesting permission.
 **Example:**
 
 ```ts
-import { getCameraPermissionStatus } from 'react-native-nitro-screen-recorder';
+import { getCameraPermissionStatus } from 'rn-nitro-screen-recorder';
 
 const status = getCameraPermissionStatus();
 if (status === 'granted') {
@@ -506,7 +508,7 @@ Gets the current microphone permission status without requesting permission.
 **Example:**
 
 ```ts
-import { getMicrophonePermissionStatus } from 'react-native-nitro-screen-recorder';
+import { getMicrophonePermissionStatus } from 'rn-nitro-screen-recorder';
 
 const status = getMicrophonePermissionStatus();
 if (status === 'granted') {
@@ -525,7 +527,7 @@ Requests camera permission from the user if not already granted. Shows the syste
 **Example:**
 
 ```ts
-import { requestCameraPermission } from 'react-native-nitro-screen-recorder';
+import { requestCameraPermission } from 'rn-nitro-screen-recorder';
 
 const response = await requestCameraPermission();
 if (response.status === 'granted') {
@@ -544,7 +546,7 @@ Requests microphone permission from the user if not already granted. Shows the s
 **Example:**
 
 ```ts
-import { requestMicrophonePermission } from 'react-native-nitro-screen-recorder';
+import { requestMicrophonePermission } from 'rn-nitro-screen-recorder';
 
 const response = await requestMicrophonePermission();
 if (response.status === 'granted') {
@@ -571,7 +573,7 @@ Starts in-app screen recording with the specified configuration. Records only th
 **Example:**
 
 ```ts
-import { startInAppRecording } from 'react-native-nitro-screen-recorder';
+import { startInAppRecording } from 'rn-nitro-screen-recorder';
 
 await startInAppRecording({
   enableMic: true,
@@ -595,7 +597,7 @@ Stops the current in-app recording and returns the recorded video file. The reco
 **Example:**
 
 ```ts
-import { stopInAppRecording } from 'react-native-nitro-screen-recorder';
+import { stopInAppRecording } from 'rn-nitro-screen-recorder';
 
 const file = await stopInAppRecording();
 if (file) {
@@ -612,7 +614,7 @@ Cancels the current in-app recording without saving the video. No file will be g
 **Example:**
 
 ```ts
-import { cancelInAppRecording } from 'react-native-nitro-screen-recorder';
+import { cancelInAppRecording } from 'rn-nitro-screen-recorder';
 
 await cancelInAppRecording(); // Recording discarded, no file saved
 ```
@@ -644,7 +646,7 @@ Starts global screen recording that captures the entire device screen. Records s
 **Example:**
 
 ```ts
-import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { startGlobalRecording } from 'rn-nitro-screen-recorder';
 
 // Recording only
 startGlobalRecording({
@@ -695,7 +697,7 @@ Stops the current global screen recording and returns the saved video file. Beca
 **Example:**
 
 ```ts
-import { stopGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { stopGlobalRecording } from 'rn-nitro-screen-recorder';
 
 const file = await stopGlobalRecording({ settledTimeMs: 1000 });
 if (file) {
@@ -714,7 +716,7 @@ Retrieves the most recently completed global recording file. Returns undefined i
 **Example:**
 
 ```ts
-import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { retrieveLastGlobalRecording } from 'rn-nitro-screen-recorder';
 
 const lastRecording = retrieveLastGlobalRecording();
 if (lastRecording) {
@@ -742,7 +744,7 @@ Adds a listener for screen recording events (began, ended, etc.). Returns a clea
 
 ```ts
 import { useEffect } from 'react';
-import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
+import { addScreenRecordingListener } from 'rn-nitro-screen-recorder';
 
 useEffect(() => {
   const removeListener = addScreenRecordingListener({
@@ -773,7 +775,7 @@ Adds a listener for iOS broadcast picker status changes (showing & dismissed). R
 
 ```ts
 import { useEffect } from 'react';
-import { addBroadcastPickerListener } from 'react-native-nitro-screen-recorder';
+import { addBroadcastPickerListener } from 'rn-nitro-screen-recorder';
 
 useEffect(() => {
   const removeListener = addBroadcastPickerListener((event) => {
@@ -812,7 +814,7 @@ Clears all cached recording files to free up storage space. This will delete tem
 **Example:**
 
 ```ts
-import { clearRecordingCache } from 'react-native-nitro-screen-recorder';
+import { clearRecordingCache } from 'rn-nitro-screen-recorder';
 
 clearRecordingCache(); // Frees up storage by removing temporary recording files
 ```

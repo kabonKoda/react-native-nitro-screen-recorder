@@ -1,4 +1,4 @@
-# react-native-nitro-screen-recorder
+# rn-nitro-screen-recorder
 
 ![React Native Screen Recorder](./banner.png)
 
@@ -32,12 +32,12 @@ A React Native library powered by [NitroModules](https://nitro.margelo.com/) tha
 
 Using npm:
 ```sh
-npm install react-native-nitro-screen-recorder react-native-nitro-modules
+npm install rn-nitro-screen-recorder react-native-nitro-modules
 ```
 
 Using yarn:
 ```sh
-yarn add react-native-nitro-screen-recorder react-native-nitro-modules
+yarn add rn-nitro-screen-recorder react-native-nitro-modules
 ```
 
 > `react-native-nitro-modules` is required as this library relies on [Nitro Modules](https://nitro.margelo.com/).
@@ -55,7 +55,7 @@ export default {
   expo: {
     plugins: [
       [
-        'react-native-nitro-screen-recorder',
+        'rn-nitro-screen-recorder',
         {
           enableCameraPermission: true,
           cameraPermissionText: "Allow $(PRODUCT_NAME) to access your camera for screen recording with camera overlay",
@@ -94,7 +94,7 @@ import {
   useMicrophonePermission,
   startGlobalRecording,
   stopGlobalRecording 
-} from 'react-native-nitro-screen-recorder';
+} from 'rn-nitro-screen-recorder';
 
 export default function ScreenRecorderExample() {
   const { hasPermission, requestPermission } = useMicrophonePermission();
@@ -191,7 +191,7 @@ Returns whether the user has granted permission to use the Camera, or not. If th
 
 **Example:**
 ```tsx
-import { useCameraPermission } from 'react-native-nitro-screen-recorder';
+import { useCameraPermission } from 'rn-nitro-screen-recorder';
 
 const { hasPermission, requestPermission } = useCameraPermission();
 
@@ -212,7 +212,7 @@ Returns whether the user has granted permission to use the Microphone, or not. I
 
 **Example:**
 ```tsx
-import { useMicrophonePermission } from 'react-native-nitro-screen-recorder';
+import { useMicrophonePermission } from 'rn-nitro-screen-recorder';
 
 const { hasPermission, requestPermission } = useMicrophonePermission();
 const canRecordAudio = hasPermission;
@@ -238,7 +238,7 @@ Subscribe to global recording lifecycle and expose the most recent finished file
 
 **Example:**
 ```tsx
-import { useGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { useGlobalRecording } from 'rn-nitro-screen-recorder';
 
 const { recording, isLoading, isError, error, refetch } = useGlobalRecording({
   refetchOnAppForeground: true
@@ -280,7 +280,7 @@ Gets the current camera permission status without requesting permission.
 
 **Example:**
 ```typescript
-import { getCameraPermissionStatus } from 'react-native-nitro-screen-recorder';
+import { getCameraPermissionStatus } from 'rn-nitro-screen-recorder';
 
 const status = getCameraPermissionStatus();
 if (status === 'granted') {
@@ -298,7 +298,7 @@ Gets the current microphone permission status without requesting permission.
 
 **Example:**
 ```typescript
-import { getMicrophonePermissionStatus } from 'react-native-nitro-screen-recorder';
+import { getMicrophonePermissionStatus } from 'rn-nitro-screen-recorder';
 
 const status = getMicrophonePermissionStatus();
 if (status === 'granted') {
@@ -316,7 +316,7 @@ Requests camera permission from the user if not already granted. Shows the syste
 
 **Example:**
 ```typescript
-import { requestCameraPermission } from 'react-native-nitro-screen-recorder';
+import { requestCameraPermission } from 'rn-nitro-screen-recorder';
 
 const response = await requestCameraPermission();
 if (response.status === 'granted') {
@@ -334,7 +334,7 @@ Requests microphone permission from the user if not already granted. Shows the s
 
 **Example:**
 ```typescript
-import { requestMicrophonePermission } from 'react-native-nitro-screen-recorder';
+import { requestMicrophonePermission } from 'rn-nitro-screen-recorder';
 
 const response = await requestMicrophonePermission();
 if (response.status === 'granted') {
@@ -355,7 +355,7 @@ Starts in-app screen recording with the specified configuration. Records only th
 
 **Example:**
 ```typescript
-import { startInAppRecording } from 'react-native-nitro-screen-recorder';
+import { startInAppRecording } from 'rn-nitro-screen-recorder';
 
 await startInAppRecording({
   options: {
@@ -378,7 +378,7 @@ Stops the current in-app recording and saves the recorded video. The recording f
 
 **Example:**
 ```typescript
-import { stopInAppRecording } from 'react-native-nitro-screen-recorder';
+import { stopInAppRecording } from 'rn-nitro-screen-recorder';
 
 stopInAppRecording(); // File will be available in onRecordingFinished callback
 ```
@@ -391,7 +391,7 @@ Cancels the current in-app recording without saving the video. No file will be g
 
 **Example:**
 ```typescript
-import { cancelInAppRecording } from 'react-native-nitro-screen-recorder';
+import { cancelInAppRecording } from 'rn-nitro-screen-recorder';
 
 cancelInAppRecording(); // Recording discarded, no file saved
 ```
@@ -406,7 +406,7 @@ Starts global screen recording that captures the entire device screen. Records s
 
 **Example:**
 ```typescript
-import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { startGlobalRecording } from 'rn-nitro-screen-recorder';
 
 startGlobalRecording();
 // User can now navigate to other apps while recording continues
@@ -422,7 +422,7 @@ Stops the current global screen recording and saves the video. The recorded file
 
 **Example:**
 ```typescript
-import { stopGlobalRecording, retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { stopGlobalRecording, retrieveLastGlobalRecording } from 'rn-nitro-screen-recorder';
 
 stopGlobalRecording();
 const file = retrieveLastGlobalRecording();
@@ -441,7 +441,7 @@ Retrieves the most recently completed global recording file. Returns undefined i
 
 **Example:**
 ```typescript
-import { retrieveLastGlobalRecording } from 'react-native-nitro-screen-recorder';
+import { retrieveLastGlobalRecording } from 'rn-nitro-screen-recorder';
 
 const lastRecording = retrieveLastGlobalRecording();
 if (lastRecording) {
@@ -466,7 +466,7 @@ Adds a listener for screen recording events (start, stop, error, etc.). Returns 
 **Example:**
 ```typescript
 import { useEffect } from 'react';
-import { addScreenRecordingListener } from 'react-native-nitro-screen-recorder';
+import { addScreenRecordingListener } from 'rn-nitro-screen-recorder';
 
 useEffect(() => {
   const removeListener = addScreenRecordingListener((event) => {
@@ -487,7 +487,7 @@ Clears all cached recording files to free up storage space. This will delete tem
 
 **Example:**
 ```typescript
-import { clearCache } from 'react-native-nitro-screen-recorder';
+import { clearCache } from 'rn-nitro-screen-recorder';
 
 clearCache(); // Frees up storage by removing temporary recording files
 ```
