@@ -120,6 +120,7 @@
     "react-native": "*",
     "react-native-nitro-modules": "^0.29.8"
   },
+  "private": true,
   "workspaces": [
     "example"
   ],
