@@ -383,6 +383,32 @@ export function addBroadcastPickerListener(
   };
 }
 
+/**
+ * Adds a listener for frame capture events during screen recording.
+ * Returns a cleanup function to remove the listener when no longer needed.
+ *
+ * @platform iOS, Android
+ * @param listener Callback function that receives captured frames
+ * @returns Cleanup function to remove the listener
+ * @example
+ * ```typescript
+ * useEffect(() => {
+ *  const removeListener = addFrameListener((frame) => {
+ *    console.log("Frame captured:", frame.width, "x", frame.height)
+ *  });
+ * // Later, remove the listener
+ * return () => removeListener();
+ * },[]);
+ * ```
+ */
+export function addFrameListener(listener: (frame: any) => void): () => void {
+  let listenerId: number;
+  listenerId = NitroScreenRecorderHybridObject.addFrameListener(listener);
+  return () => {
+    NitroScreenRecorderHybridObject.removeFrameListener(listenerId);
+  };
+}
+
 // ============================================================================
 // UTILITIES
 // ============================================================================

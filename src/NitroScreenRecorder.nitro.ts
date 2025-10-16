@@ -47,9 +47,7 @@ export interface NitroScreenRecorder
   ): number;
   removeBroadcastPickerListener(id: number): void;
 
-  addFrameListener(
-    callback: (frame: ScreenFrame) => void
-  ): number;
+  addFrameListener(callback: (frame: ScreenFrame) => void): number;
   removeFrameListener(id: number): void;
 
   // ============================================================================

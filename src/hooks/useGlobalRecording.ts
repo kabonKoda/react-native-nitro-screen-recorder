@@ -3,7 +3,7 @@ import {
   addBroadcastPickerListener,
   addScreenRecordingListener,
   retrieveLastGlobalRecording,
-  ScreenRecorder,
+  addFrameListener,
 } from '../functions';
 import type { ScreenRecordingFile, ScreenFrame } from '../types';
 
@@ -55,34 +55,34 @@ type GlobalRecordingHookInput = {
   /**
    * Callback invoked for each captured frame during recording (when frame streaming is enabled).
    * Receives frame metadata including dimensions, timestamp, and format.
-   * 
+   *
    * @param frame The captured frame metadata
    */
   onFrameCaptured?: (frame: ScreenFrame) => void;
   /**
    * Whether to enable video recording to disk.
    * At least one of enableRecording or enableStreaming must be true.
-   * 
+   *
    * @default true
    */
   enableRecording?: boolean;
   /**
    * Whether to enable frame streaming for real-time frame capture.
    * At least one of enableRecording or enableStreaming must be true.
-   * 
+   *
    * @default false
    */
   enableStreaming?: boolean;
   /**
    * Video encoding bitrate in bits per second.
    * Higher values produce better quality but larger files.
-   * 
+   *
    * @default 8388608 (8 Mbps)
    */
   bitrate?: number;
   /**
    * Target frame rate for recording and streaming.
-   * 
+   *
    * @default 60
    */
   fps?: number;
@@ -180,7 +180,7 @@ export const useGlobalRecording = (
   useEffect(() => {
     if (!props?.onFrameCaptured) return;
 
-    const unsubscribe = ScreenRecorder.addFrameListener((frame) => {
+    const unsubscribe = addFrameListener((frame) => {
       props.onFrameCaptured?.(frame);
     });
 
