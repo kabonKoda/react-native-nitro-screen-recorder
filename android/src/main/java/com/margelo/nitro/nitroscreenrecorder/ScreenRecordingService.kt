@@ -8,6 +8,10 @@ import android.hardware.display.VirtualDisplay
 import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
+import android.media.ImageReader
+import android.graphics.PixelFormat
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -29,6 +33,22 @@ class ScreenRecordingService : Service() {
   private var screenHeight = 0
   private var screenDensity = 0
   private var startId: Int = -1
+  
+  // Recording configuration
+  private var enableRecording = true
+  private var enableStreaming = false
+  private var bitrate: Int? = null // Optional bitrate, defaults to 8 Mbps if not set
+  private var fps: Int = 60 // 60 FPS default
+  
+  // Frame streaming support
+  private var frameStreamingEnabled = false
+  private var imageReader: ImageReader? = null
+  private var frameVirtualDisplay: VirtualDisplay? = null
+  private var frameHandlerThread: HandlerThread? = null
+  private var frameHandler: Handler? = null
+  private var lastFrameTime: Long = 0
+  private var minFrameIntervalMs: Long = 33 // ~30 FPS
+  private var recordingStartTime: Long = 0
 
   private val binder = LocalBinder()
 
@@ -50,6 +70,10 @@ class ScreenRecordingService : Service() {
     const val EXTRA_RESULT_CODE = "RESULT_CODE"
     const val EXTRA_RESULT_DATA = "RESULT_DATA"
     const val EXTRA_ENABLE_MIC = "ENABLE_MIC"
+    const val EXTRA_ENABLE_RECORDING = "ENABLE_RECORDING"
+    const val EXTRA_ENABLE_STREAMING = "ENABLE_STREAMING"
+    const val EXTRA_BITRATE = "BITRATE"
+    const val EXTRA_FPS = "FPS"
   }
 
   inner class LocalBinder : Binder() {
@@ -88,14 +112,18 @@ class ScreenRecordingService : Service() {
           intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
         val resultData = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
         val enableMicrophone = intent.getBooleanExtra(EXTRA_ENABLE_MIC, false)
+        val enableRec = intent.getBooleanExtra(EXTRA_ENABLE_RECORDING, true)
+        val enableStream = intent.getBooleanExtra(EXTRA_ENABLE_STREAMING, false)
+        val bitrateValue = if (intent.hasExtra(EXTRA_BITRATE)) intent.getIntExtra(EXTRA_BITRATE, 0) else null
+        val fpsValue = intent.getIntExtra(EXTRA_FPS, 60)
 
         Log.d(
           TAG,
-          "🎬 Start recording: resultCode=$resultCode, enableMic=$enableMicrophone"
+          "🎬 Start recording: resultCode=$resultCode, enableMic=$enableMicrophone, enableRecording=$enableRec, enableStreaming=$enableStream, bitrate=$bitrateValue, fps=$fpsValue"
         )
 
         if (resultData != null) {
-          startRecording(resultCode, resultData, enableMicrophone)
+          startRecording(resultCode, resultData, enableMicrophone, enableRec, enableStream, bitrateValue, fpsValue)
         } else {
           Log.e(TAG, "❌ ResultData is null, cannot start recording")
         }
@@ -141,11 +169,15 @@ class ScreenRecordingService : Service() {
   fun startRecording(
     resultCode: Int,
     resultData: Intent,
-    enableMicrophone: Boolean
+    enableMicrophone: Boolean,
+    enableRec: Boolean,
+    enableStream: Boolean,
+    bitrateValue: Int?,
+    fpsValue: Int
   ) {
     Log.d(
       TAG,
-      "🎬 startRecording called: resultCode=$resultCode, enableMic=$enableMicrophone"
+      "🎬 startRecording called: resultCode=$resultCode, enableMic=$enableMicrophone, enableRecording=$enableRec, enableStreaming=$enableStream, bitrate=$bitrateValue, fps=$fpsValue"
     )
 
     if (isRecording) {
@@ -155,6 +187,11 @@ class ScreenRecordingService : Service() {
 
     try {
       this.enableMic = enableMicrophone
+      this.enableRecording = enableRec
+      this.enableStreaming = enableStream
+      this.bitrate = bitrateValue
+      this.fps = fpsValue
+      this.minFrameIntervalMs = 1000L / fpsValue
 
       startForeground(NOTIFICATION_ID, createForegroundNotification(false))
 
@@ -166,36 +203,48 @@ class ScreenRecordingService : Service() {
       // Register the callback BEFORE creating VirtualDisplay
       mediaProjection?.registerCallback(mediaProjectionCallback, null)
 
-      // write into the app-specific external cache (no runtime READ_EXTERNAL_STORAGE needed)
-      val base = applicationContext.externalCacheDir
-        ?: applicationContext.filesDir
-      val recordingsDir = File(base, "recordings")
-      currentRecordingFile =
-        RecorderUtils.createOutputFile(recordingsDir, "global_recording")
+      // Setup recording if enabled
+      if (enableRecording) {
+        // write into the app-specific external cache (no runtime READ_EXTERNAL_STORAGE needed)
+        val base = applicationContext.externalCacheDir
+          ?: applicationContext.filesDir
+        val recordingsDir = File(base, "recordings")
+        currentRecordingFile =
+          RecorderUtils.createOutputFile(recordingsDir, "global_recording")
 
-      mediaRecorder = RecorderUtils.setupMediaRecorder(
-        this,
-        enableMicrophone,
-        currentRecordingFile!!,
-        screenWidth,
-        screenHeight,
-        8 * 1024 * 1024
-      ) // 8 Mbps
-      mediaRecorder?.prepare()
+        val bitrateValue = bitrate ?: (8 * 1024 * 1024) // Default to 8 Mbps if not specified
+        mediaRecorder = RecorderUtils.setupMediaRecorder(
+          this,
+          enableMicrophone,
+          currentRecordingFile!!,
+          screenWidth,
+          screenHeight,
+          bitrateValue,
+          fps
+        )
+        mediaRecorder?.prepare()
 
-      virtualDisplay = mediaProjection?.createVirtualDisplay(
-        "GlobalScreenRecording",
-        screenWidth,
-        screenHeight,
-        screenDensity,
-        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-        mediaRecorder?.surface,
-        null,
-        null
-      )
+        virtualDisplay = mediaProjection?.createVirtualDisplay(
+          "GlobalScreenRecording",
+          screenWidth,
+          screenHeight,
+          screenDensity,
+          DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+          mediaRecorder?.surface,
+          null,
+          null
+        )
 
-      mediaRecorder?.start()
+        mediaRecorder?.start()
+      }
+      
       isRecording = true
+      recordingStartTime = System.currentTimeMillis()
+      
+      // Initialize frame streaming if enabled
+      if (enableStreaming) {
+        setupFrameStreaming()
+      }
 
       val notificationManager = getSystemService(NotificationManager::class.java)
       notificationManager.notify(NOTIFICATION_ID, createForegroundNotification(true))
@@ -267,6 +316,9 @@ class ScreenRecordingService : Service() {
     Log.d(TAG, "🧹 cleanup() called")
 
     try {
+      // Clean up frame streaming resources
+      cleanupFrameStreaming()
+      
       virtualDisplay?.release()
       virtualDisplay = null
       mediaRecorder?.release()
@@ -284,6 +336,122 @@ class ScreenRecordingService : Service() {
   }
 
   fun isCurrentlyRecording(): Boolean = isRecording
+  
+  fun enableFrameStreaming(enabled: Boolean) {
+    Log.d(TAG, "🎞️ Frame streaming ${if (enabled) "enabled" else "disabled"}")
+    frameStreamingEnabled = enabled
+    
+    if (isRecording) {
+      if (enabled && frameVirtualDisplay == null) {
+        setupFrameStreaming()
+      } else if (!enabled && frameVirtualDisplay != null) {
+        cleanupFrameStreaming()
+      }
+    }
+  }
+  
+  private fun setupFrameStreaming() {
+    try {
+      Log.d(TAG, "🎞️ Setting up frame streaming")
+      
+      // Create HandlerThread for frame processing
+      frameHandlerThread = HandlerThread("FrameStreamingThread").apply {
+        start()
+      }
+      frameHandler = Handler(frameHandlerThread!!.looper)
+      
+      // Create ImageReader for frame capture
+      imageReader = ImageReader.newInstance(
+        screenWidth,
+        screenHeight,
+        PixelFormat.RGBA_8888,
+        2 // Double buffering
+      )
+      
+      // Set up frame listener
+      imageReader?.setOnImageAvailableListener({ reader ->
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastFrameTime >= minFrameIntervalMs) {
+          lastFrameTime = currentTime
+          processFrame(reader, currentTime)
+        } else {
+          // Skip frame to maintain target frame rate
+          reader.acquireLatestImage()?.close()
+        }
+      }, frameHandler)
+      
+      // Create separate VirtualDisplay for frame streaming
+      frameVirtualDisplay = mediaProjection?.createVirtualDisplay(
+        "FrameStreamingDisplay",
+        screenWidth,
+        screenHeight,
+        screenDensity,
+        DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+        imageReader?.surface,
+        null,
+        frameHandler
+      )
+      
+      Log.d(TAG, "✅ Frame streaming setup complete")
+    } catch (e: Exception) {
+      Log.e(TAG, "❌ Error setting up frame streaming: ${e.message}")
+      e.printStackTrace()
+    }
+  }
+  
+  private fun processFrame(reader: ImageReader, timestamp: Long) {
+    var image: android.media.Image? = null
+    try {
+      image = reader.acquireLatestImage()
+      if (image != null) {
+        val planes = image.planes
+        val buffer = planes[0].buffer
+        val pixelStride = planes[0].pixelStride
+        val rowStride = planes[0].rowStride
+        val rowPadding = rowStride - pixelStride * screenWidth
+        
+        val relativeTimestamp = timestamp - recordingStartTime
+        
+        // Create ScreenFrame object and notify listeners
+        val frame = ScreenFrame(
+          width = screenWidth.toDouble(),
+          height = screenHeight.toDouble(),
+          bytesPerRow = rowStride.toDouble(),
+          timestamp = timestamp.toDouble(),
+          relativeTimestamp = relativeTimestamp.toDouble(),
+          format = "RGBA_8888"
+        )
+        
+        NitroScreenRecorder.notifyFrameAvailable(frame)
+        
+        Log.d(TAG, "📸 Frame captured: ${screenWidth}x${screenHeight}, timestamp=$relativeTimestamp ms")
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "❌ Error processing frame: ${e.message}")
+    } finally {
+      image?.close()
+    }
+  }
+  
+  private fun cleanupFrameStreaming() {
+    try {
+      Log.d(TAG, "🧹 Cleaning up frame streaming")
+      
+      frameVirtualDisplay?.release()
+      frameVirtualDisplay = null
+      
+      imageReader?.close()
+      imageReader = null
+      
+      frameHandlerThread?.quitSafely()
+      frameHandlerThread = null
+      frameHandler = null
+      
+      Log.d(TAG, "✅ Frame streaming cleanup complete")
+    } catch (e: Exception) {
+      Log.e(TAG, "❌ Error cleaning up frame streaming: ${e.message}")
+    }
+  }
 
   override fun onDestroy() {
     Log.d(TAG, "💀 onDestroy called")

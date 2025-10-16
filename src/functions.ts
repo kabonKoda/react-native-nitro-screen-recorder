@@ -16,6 +16,12 @@ const NitroScreenRecorderHybridObject =
 
 const isAndroid = Platform.OS === 'android';
 
+/**
+ * Direct access to the NitroScreenRecorder hybrid object for advanced use cases.
+ * Use this to call methods like addFrameListener, removeFrameListener, and enableFrameStreaming.
+ */
+export const ScreenRecorder = NitroScreenRecorderHybridObject;
+
 // ============================================================================
 // PERMISSIONS
 // ============================================================================
@@ -206,7 +212,16 @@ export async function cancelInAppRecording(): Promise<void> {
  * @platform iOS, Android
  * @example
  * ```typescript
- * startGlobalRecording();
+ * startGlobalRecording({
+ *   options: {
+ *     enableMic: true,
+ *     enableRecording: true,
+ *     enableStreaming: false,
+ *     bitrate: 5000000, // 5 Mbps
+ *     fps: 30
+ *   },
+ *   onRecordingError: (error) => console.error(error)
+ * });
  * // User can now navigate to other apps while recording continues
  * ```
  */
@@ -220,8 +235,23 @@ export function startGlobalRecording(input: GlobalRecordingInput): void {
   ) {
     throw new Error('Microphone permission not granted.');
   }
+
+  const enableRecording = input.options?.enableRecording ?? true;
+  const enableStreaming = input.options?.enableStreaming ?? false;
+
+  // Validate that at least one mode is enabled
+  if (!enableRecording && !enableStreaming) {
+    throw new Error(
+      'At least one of enableRecording or enableStreaming must be true'
+    );
+  }
+
   return NitroScreenRecorderHybridObject.startGlobalRecording(
     input?.options?.enableMic ?? false,
+    enableRecording,
+    enableStreaming,
+    input?.options?.bitrate ?? 0, // 0 means use platform default
+    input?.options?.fps ?? 30,
     input?.onRecordingError
   );
 }

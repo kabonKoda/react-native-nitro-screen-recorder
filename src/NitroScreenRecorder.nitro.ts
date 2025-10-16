@@ -8,6 +8,7 @@ import type {
   PermissionStatus,
   RecordingError,
   BroadcastPickerPresentationEvent,
+  ScreenFrame,
 } from './types';
 
 /**
@@ -46,6 +47,11 @@ export interface NitroScreenRecorder
   ): number;
   removeBroadcastPickerListener(id: number): void;
 
+  addFrameListener(
+    callback: (frame: ScreenFrame) => void
+  ): number;
+  removeFrameListener(id: number): void;
+
   // ============================================================================
   // IN-APP RECORDING
   // ============================================================================
@@ -67,12 +73,22 @@ export interface NitroScreenRecorder
 
   startGlobalRecording(
     enableMic: boolean,
+    enableRecording: boolean,
+    enableStreaming: boolean,
+    bitrate: number,
+    fps: number,
     onRecordingError: (error: RecordingError) => void
   ): void;
   stopGlobalRecording(
     settledTimeMs: number
   ): Promise<ScreenRecordingFile | undefined>;
   retrieveLastGlobalRecording(): ScreenRecordingFile | undefined;
+
+  // ============================================================================
+  // FRAME STREAMING
+  // ============================================================================
+
+  enableFrameStreaming(enabled: boolean): void;
 
   // ============================================================================
   // UTILITIES

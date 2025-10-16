@@ -11,6 +11,7 @@ enum RecorderError: Error {
 typealias RecordingFinishedCallback = (ScreenRecordingFile) -> Void
 typealias ScreenRecordingListener = (ScreenRecordingEvent) -> Void
 typealias BroadcastPickerViewListener = (BroadcastPickerPresentationEvent) -> Void
+typealias FrameListener = (ScreenFrame) -> Void
 
 struct Listener<T> {
   let id: Double
@@ -32,7 +33,10 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
   private var onInAppRecordingFinishedCallback: RecordingFinishedCallback?
   private var recordingEventListeners: [ScreenRecordingListenerType] = []
   public var broadcastPickerEventListeners: [Listener<BroadcastPickerViewListener>] = []
+  private var frameListeners: [Listener<FrameListener>] = []
   private var nextListenerId: Double = 0
+  private var frameObserver: CFNotificationCenter?
+  private let frameNotificationName = "com.nitro.screenrecorder.frameAvailable" as CFString
 
   // App state tracking for broadcast modal
   private var isBroadcastModalShowing: Bool = false
@@ -42,11 +46,13 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     super.init()
     registerListener()
     setupAppStateObservers()
+    setupFrameListener()
   }
 
   deinit {
     unregisterListener()
     removeAppStateObservers()
+    removeFrameListener()
   }
 
   func registerListener() {
@@ -452,14 +458,29 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
     }
   }
 
-  func startGlobalRecording(enableMic: Bool, onRecordingError: @escaping (RecordingError) -> Void)
-    throws
-  {
+  func startGlobalRecording(
+    enableMic: Bool,
+    enableRecording: Bool,
+    enableStreaming: Bool,
+    bitrate: Double,
+    fps: Double,
+    onRecordingError: @escaping (RecordingError) -> Void
+  ) throws {
     guard !isGlobalRecordingActive else {
       print("⚠️ Attempted to start a global recording, but one is already active.")
       let error = RecordingError(
         name: "BROADCAST_ALREADY_ACTIVE",
         message: "A screen recording session is already in progress."
+      )
+      onRecordingError(error)
+      return
+    }
+
+    // Validate that at least one mode is enabled
+    guard enableRecording || enableStreaming else {
+      let error = RecordingError(
+        name: "INVALID_CONFIGURATION",
+        message: "At least one of enableRecording or enableStreaming must be true"
       )
       onRecordingError(error)
       return
@@ -486,6 +507,16 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       )
       onRecordingError(error)
       return
+    }
+
+    // Store configuration in UserDefaults for the broadcast extension to read
+    if let sharedDefaults = UserDefaults(suiteName: appGroupId) {
+      sharedDefaults.set(enableRecording, forKey: "enableRecording")
+      sharedDefaults.set(enableStreaming, forKey: "enableStreaming")
+      sharedDefaults.set(bitrate > 0 ? Int(bitrate) : 0, forKey: "bitrate")
+      sharedDefaults.set(fps > 0 ? Int(fps) : 30, forKey: "fps")
+      sharedDefaults.synchronize()
+      print("📝 Global recording config saved: recording=\(enableRecording), streaming=\(enableStreaming), bitrate=\(bitrate), fps=\(fps)")
     }
 
     // Present the broadcast picker
@@ -658,6 +689,126 @@ class NitroScreenRecorder: HybridNitroScreenRecorderSpec {
       print("✅ In‑app recording discarded")
     }
   }
+
+  // MARK: - Frame Streaming
+  
+  private func setupFrameListener() {
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    
+    CFNotificationCenterAddObserver(
+      center,
+      observer,
+      { (center, observer, name, object, userInfo) in
+        guard let observer = observer else { return }
+        let mySelf = Unmanaged<NitroScreenRecorder>.fromOpaque(observer).takeUnretainedValue()
+        mySelf.handleFrameAvailable()
+      },
+      frameNotificationName,
+      nil,
+      .deliverImmediately
+    )
+  }
+  
+  private func removeFrameListener() {
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    let observer = Unmanaged.passUnretained(self).toOpaque()
+    
+    CFNotificationCenterRemoveObserver(
+      center,
+      observer,
+      CFNotificationName(frameNotificationName),
+      nil
+    )
+  }
+  
+  private func handleFrameAvailable() {
+    guard !frameListeners.isEmpty else { return }
+    
+    // Read frame data from UserDefaults in app group
+    guard let appGroupId = try? getAppGroupIdentifier(),
+          let userDefaults = UserDefaults(suiteName: appGroupId),
+          let frameData = userDefaults.dictionary(forKey: "lastFrameMetadata") else {
+      return
+    }
+    
+    // Parse frame metadata
+    guard let width = frameData["width"] as? Double,
+          let height = frameData["height"] as? Double,
+          let bytesPerRow = frameData["bytesPerRow"] as? Double,
+          let timestamp = frameData["timestamp"] as? Double,
+          let relativeTimestamp = frameData["relativeTimestamp"] as? Double,
+          let format = frameData["format"] as? String else {
+      return
+    }
+    
+    let frame = ScreenFrame(
+      width: width,
+      height: height,
+      bytesPerRow: bytesPerRow,
+      timestamp: timestamp,
+      relativeTimestamp: relativeTimestamp,
+      format: format
+    )
+    
+    // Notify all frame listeners
+    frameListeners.forEach { $0.callback(frame) }
+  }
+  
+  func addFrameListener(callback: @escaping (ScreenFrame) -> Void) throws -> Double {
+    let listener = Listener(id: nextListenerId, callback: callback)
+    frameListeners.append(listener)
+    nextListenerId += 1
+    return listener.id
+  }
+  
+  func removeFrameListener(id: Double) throws {
+    frameListeners.removeAll { $0.id == id }
+  }
+  
+  func enableFrameStreaming(config: FrameStreamConfig) throws {
+    guard let appGroupId = try? getAppGroupIdentifier() else {
+      throw RecorderError.error(
+        name: "APP_GROUP_NOT_CONFIGURED",
+        message: "App group identifier not configured"
+      )
+    }
+    
+    // Store config in UserDefaults
+    let userDefaults = UserDefaults(suiteName: appGroupId)
+    userDefaults?.set(config.targetFps, forKey: "frameStreamTargetFps")
+    userDefaults?.set(config.downscaleFactor, forKey: "frameStreamDownscale")
+    userDefaults?.set(config.quality, forKey: "frameStreamQuality")
+    userDefaults?.synchronize()
+    
+    // Send Darwin notification to enable frame streaming in broadcast extension
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterPostNotification(
+      center,
+      CFNotificationName("com.nitro.screenrecorder.enableFrameStreaming" as CFString),
+      nil,
+      nil,
+      true
+    )
+    
+    print("✅ Frame streaming enabled with config: fps=\(config.targetFps), downscale=\(config.downscaleFactor), quality=\(config.quality)")
+  }
+  
+  func disableFrameStreaming() throws {
+    // Send Darwin notification to disable frame streaming in broadcast extension
+    let center = CFNotificationCenterGetDarwinNotifyCenter()
+    CFNotificationCenterPostNotification(
+      center,
+      CFNotificationName("com.nitro.screenrecorder.disableFrameStreaming" as CFString),
+      nil,
+      nil,
+      true
+    )
+    
+    print("✅ Frame streaming disabled")
+  }
+}
 
   func clearRecordingCache() throws {
     try safelyClearGlobalRecordingFiles()

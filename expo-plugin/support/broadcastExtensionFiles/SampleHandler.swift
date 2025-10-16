@@ -36,6 +36,12 @@ final class SampleHandler: RPBroadcastSampleHandler {
   private let fileManager: FileManager = .default
   private let nodeURL: URL
   private var sawMicBuffers = false
+  
+  // Frame streaming support
+  private var frameStreamingEnabled = false
+  private var recordingStartTime: CMTime?
+  private var lastFrameTime: TimeInterval = 0
+  private let minFrameInterval: TimeInterval = 1.0 / 30.0 // 30 FPS max
 
   // MARK: – Init
   override init() {
@@ -78,6 +84,35 @@ final class SampleHandler: RPBroadcastSampleHandler {
       nil,
       .deliverImmediately
     )
+    
+    // Listen for frame streaming control
+    let enableStreamingNotification = CFNotificationName("com.nitroscreenrecorder.enableFrameStreaming" as CFString)
+    CFNotificationCenterAddObserver(
+      center,
+      UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+      { _, observer, name, _, _ in
+        guard let observer else { return }
+        let handler = Unmanaged<SampleHandler>.fromOpaque(observer).takeUnretainedValue()
+        handler.enableFrameStreaming(true)
+      },
+      enableStreamingNotification.rawValue,
+      nil,
+      .deliverImmediately
+    )
+    
+    let disableStreamingNotification = CFNotificationName("com.nitroscreenrecorder.disableFrameStreaming" as CFString)
+    CFNotificationCenterAddObserver(
+      center,
+      UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+      { _, observer, name, _, _ in
+        guard let observer else { return }
+        let handler = Unmanaged<SampleHandler>.fromOpaque(observer).takeUnretainedValue()
+        handler.enableFrameStreaming(false)
+      },
+      disableStreamingNotification.rawValue,
+      nil,
+      .deliverImmediately
+    )
   }
 
   // MARK: – Broadcast lifecycle
@@ -95,20 +130,34 @@ final class SampleHandler: RPBroadcastSampleHandler {
       return
     }
 
+    // Read recording configuration from UserDefaults
+    let defaults = UserDefaults(suiteName: groupID)
+    let enableRecording = defaults?.bool(forKey: "enableRecording") ?? true
+    let enableStreaming = defaults?.bool(forKey: "enableStreaming") ?? false
+    let bitrate = defaults?.integer(forKey: "bitrate") ?? 0 // 0 means use default
+    let fps = defaults?.integer(forKey: "fps") ?? 60
+    
+    // Store streaming configuration
+    frameStreamingEnabled = enableStreaming
+
     // Clean up old recordings
     cleanupOldRecordings(in: groupID)
 
-    // Start recording
-    let screen: UIScreen = .main
-    do {
-      writer = try .init(
-        outputURL: nodeURL,
-        screenSize: screen.bounds.size,
-        screenScale: screen.scale
-      )
-      try writer?.start()
-    } catch {
-      finishBroadcastWithError(error)
+    // Start recording if enabled
+    if enableRecording {
+      let screen: UIScreen = .main
+      do {
+        writer = try .init(
+          outputURL: nodeURL,
+          screenSize: screen.bounds.size,
+          screenScale: screen.scale,
+          bitrate: bitrate > 0 ? bitrate : nil,
+          frameRate: fps
+        )
+        try writer?.start()
+      } catch {
+        finishBroadcastWithError(error)
+      }
     }
   }
 
@@ -136,6 +185,11 @@ final class SampleHandler: RPBroadcastSampleHandler {
 
     if sampleBufferType == .audioMic { 
       sawMicBuffers = true 
+    }
+
+    // Extract frame if streaming is enabled and this is a video buffer
+    if frameStreamingEnabled && sampleBufferType == .video {
+      extractAndSendFrame(from: sampleBuffer)
     }
 
     do {
@@ -197,6 +251,82 @@ final class SampleHandler: RPBroadcastSampleHandler {
     // Persist microphone state
     UserDefaults(suiteName: groupID)?
       .set(sawMicBuffers, forKey: "LastBroadcastMicrophoneWasEnabled")
+  }
+}
+
+  // MARK: - Frame Extraction
+  
+  private func extractAndSendFrame(from sampleBuffer: CMSampleBuffer) {
+    // Throttle frame extraction based on configured interval
+    let currentTime = CACurrentMediaTime()
+    guard currentTime - lastFrameTime >= minFrameInterval else { return }
+    lastFrameTime = currentTime
+    
+    guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+    
+    // Lock the base address of the pixel buffer
+    CVPixelBufferLockBaseAddress(imageBuffer, .readOnly)
+    defer { CVPixelBufferUnlockBaseAddress(imageBuffer, .readOnly) }
+    
+    // Get pixel buffer info
+    let width = CVPixelBufferGetWidth(imageBuffer)
+    let height = CVPixelBufferGetHeight(imageBuffer)
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
+    
+    guard let baseAddress = CVPixelBufferGetBaseAddress(imageBuffer) else { return }
+    
+    // Get presentation timestamp
+    let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+    let timestampSeconds = CMTimeGetSeconds(timestamp)
+    
+    // Calculate relative timestamp from recording start
+    let relativeTimestamp: Double
+    if let startTime = recordingStartTime {
+      relativeTimestamp = CMTimeGetSeconds(timestamp - startTime)
+    } else {
+      recordingStartTime = timestamp
+      relativeTimestamp = 0.0
+    }
+    
+    // Create frame data dictionary
+    let frameData: [String: Any] = [
+      "width": width,
+      "height": height,
+      "bytesPerRow": bytesPerRow,
+      "timestamp": timestampSeconds,
+      "relativeTimestamp": relativeTimestamp,
+      "format": "BGRA"
+    ]
+    
+    // Send notification with frame metadata
+    if let groupID = hostAppGroupIdentifier {
+      let defaults = UserDefaults(suiteName: groupID)
+      
+      // Store frame metadata
+      if let jsonData = try? JSONSerialization.data(withJSONObject: frameData),
+         let jsonString = String(data: jsonData, encoding: .utf8) {
+        defaults?.set(jsonString, forKey: "LastFrameMetadata")
+        defaults?.set(Date().timeIntervalSince1970, forKey: "LastFrameTime")
+      }
+      
+      // Send Darwin notification that a frame is available
+      let frameNotification = CFNotificationName("com.nitroscreenrecorder.frameAvailable" as CFString)
+      CFNotificationCenterPostNotification(
+        CFNotificationCenterGetDarwinNotifyCenter(),
+        frameNotification,
+        nil,
+        nil,
+        true
+      )
+    }
+  }
+  
+  private func enableFrameStreaming(_ enabled: Bool) {
+    frameStreamingEnabled = enabled
+    if enabled {
+      recordingStartTime = nil
+      lastFrameTime = 0
+    }
   }
 }
 

@@ -37,6 +37,8 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
 
   private val screenRecordingListeners =
     mutableListOf<Listener<(ScreenRecordingEvent) -> Unit>>()
+  private val frameListeners =
+    mutableListOf<Listener<(ScreenFrame) -> Unit>>()
   private var nextListenerId = 0.0
 
   companion object {
@@ -80,6 +82,10 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         "❌ notifyGlobalRecordingError called with error: ${error.name} - ${error.message}"
       )
       instance?.globalRecordingErrorCallback?.invoke(error)
+    }
+
+    fun notifyFrameAvailable(frame: ScreenFrame) {
+      instance?.notifyFrameListeners(frame)
     }
   }
 
@@ -135,6 +141,40 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
 
   override fun removeBroadcastPickerListener(id: Double) {
     // No-op on Android - broadcast picker is iOS-only concept  
+  }
+
+  // Frame streaming methods
+  override fun addFrameListener(callback: (ScreenFrame) -> Unit): Double {
+    val id = nextListenerId++
+    frameListeners += Listener(id, callback)
+    Log.d(TAG, "👂 Added frame listener with ID: $id, total listeners: ${frameListeners.size}")
+    return id
+  }
+
+  override fun removeFrameListener(id: Double) {
+    frameListeners.removeAll { it.id == id }
+    Log.d(TAG, "🗑️ Removed frame listener with ID: $id, remaining: ${frameListeners.size}")
+  }
+
+  override fun enableFrameStreaming(maxFps: Double) {
+    val ctx = NitroModules.applicationContext ?: throw Error("NO_CONTEXT")
+    globalRecordingService?.enableFrameStreaming(maxFps.toInt())
+    Log.d(TAG, "📹 Frame streaming enabled with maxFps: $maxFps")
+  }
+
+  override fun disableFrameStreaming() {
+    globalRecordingService?.disableFrameStreaming()
+    Log.d(TAG, "⏹️ Frame streaming disabled")
+  }
+
+  private fun notifyFrameListeners(frame: ScreenFrame) {
+    frameListeners.forEach { listener ->
+      try {
+        listener.callback(frame)
+      } catch (e: Exception) {
+        Log.e(TAG, "❌ Error in frame listener ${listener.id}: ${e.message}")
+      }
+    }
   }
 
   // Service connection for Global Recording
@@ -297,7 +337,24 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
 
   // --- Global Recording Methods ---
 
-  override fun startGlobalRecording(enableMic: Boolean, onRecordingError: (RecordingError) -> Unit) {
+  override fun startGlobalRecording(
+    enableMic: Boolean,
+    enableRecording: Boolean,
+    enableStreaming: Boolean,
+    bitrate: Double,
+    fps: Double,
+    onRecordingError: (RecordingError) -> Unit
+  ) {
+    // Validate that at least one mode is enabled
+    if (!enableRecording && !enableStreaming) {
+      val error = RecordingError(
+        name = "INVALID_CONFIGURATION",
+        message = "At least one of enableRecording or enableStreaming must be true"
+      )
+      onRecordingError(error)
+      return
+    }
+
     if (globalRecordingService?.isCurrentlyRecording() == true) {
       Log.w(TAG, "⚠️ Global recording already in progress")
       return
@@ -317,7 +374,11 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         action = ScreenRecordingService.ACTION_START_RECORDING
         putExtra(ScreenRecordingService.EXTRA_RESULT_CODE, resultCode)
         putExtra(ScreenRecordingService.EXTRA_RESULT_DATA, resultData)
-        putExtra(ScreenRecordingService.EXTRA_ENABLE_MIC, enableMic) // Use the parameter instead of hardcoded true
+        putExtra(ScreenRecordingService.EXTRA_ENABLE_MIC, enableMic)
+        putExtra(ScreenRecordingService.EXTRA_ENABLE_RECORDING, enableRecording)
+        putExtra(ScreenRecordingService.EXTRA_ENABLE_STREAMING, enableStreaming)
+        putExtra(ScreenRecordingService.EXTRA_BITRATE, bitrate.toInt())
+        putExtra(ScreenRecordingService.EXTRA_FPS, fps.toInt())
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -330,7 +391,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         name = "GlobalRecordingStartError",
         message = error.message ?: "Failed to start global recording"
       )
-      onRecordingError(recordingError) // Use the callback parameter directly
+      onRecordingError(recordingError)
     }
   }
 

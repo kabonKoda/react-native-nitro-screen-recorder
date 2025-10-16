@@ -157,6 +157,14 @@ export type InAppRecordingInput = {
 export type GlobalRecordingInputOptions = {
   /** Whether to record microphone audio during the global recording. */
   enableMic: boolean;
+  /** Whether to enable video recording to file (default: true). At least one of enableRecording or enableStreaming must be true. */
+  enableRecording?: boolean;
+  /** Whether to enable frame streaming for real-time processing (default: false). At least one of enableRecording or enableStreaming must be true. */
+  enableStreaming?: boolean;
+  /** Video bitrate in bits per second (default: platform-specific, typically 5Mbps for 1080p) */
+  bitrate?: number;
+  /** Target frames per second for recording (default: 30). Note: streaming fps is controlled separately via FrameStreamConfig */
+  fps?: number;
 };
 
 /**
@@ -283,3 +291,69 @@ export interface ScreenRecordingEvent {
  * Track the status of the broadcast picker view for fine tuning system recordings.
  */
 export type BroadcastPickerPresentationEvent = 'showing' | 'dismissed';
+
+/**
+ * Represents a single frame captured during screen recording.
+ * Contains the raw pixel data and metadata about the frame.
+ *
+ * @example
+ * ```typescript
+ * const frame: ScreenFrame = {
+ *   data: new Uint8Array([...]),
+ *   width: 1920,
+ *   height: 1080,
+ *   timestamp: 1234567890,
+ *   format: 'RGBA'
+ * };
+ * ```
+ */
+export interface ScreenFrame {
+  /** Raw pixel data as byte array */
+  data: ArrayBuffer;
+  /** Frame width in pixels */
+  width: number;
+  /** Frame height in pixels */
+  height: number;
+  /** Timestamp in milliseconds since recording started */
+  timestamp: number;
+  /** Pixel format of the frame data */
+  format: 'RGBA' | 'BGRA' | 'RGB' | 'YUV';
+}
+
+/**
+ * Callback function type for receiving frame data during recording.
+ * Called for each frame captured during screen recording.
+ *
+ * @param frame - The captured frame data
+ *
+ * @example
+ * ```typescript
+ * const onFrame: FrameCallback = (frame) => {
+ *   console.log(`Received frame: ${frame.width}x${frame.height} at ${frame.timestamp}ms`);
+ *   // Process frame data...
+ * };
+ * ```
+ */
+export type FrameCallback = (frame: ScreenFrame) => void;
+
+/**
+ * Configuration options for frame streaming during recording.
+ * Allows control over frame rate and quality to balance performance.
+ *
+ * @example
+ * ```typescript
+ * const streamConfig: FrameStreamConfig = {
+ *   frameRate: 30,
+ *   downscaleFactor: 2,
+ *   quality: 0.8
+ * };
+ * ```
+ */
+export interface FrameStreamConfig {
+  /** Frames per second to capture for streaming (default: 30) */
+  frameRate?: number;
+  /** Factor to downscale resolution (2 = half resolution, default: 1) */
+  downscaleFactor?: number;
+  /** Compression quality for frame data 0-1 (default: 1.0) */
+  quality?: number;
+}

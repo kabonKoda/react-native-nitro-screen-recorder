@@ -438,8 +438,12 @@ React hook for monitoring and responding to global screen recording events.
 - `onRecordingFinished?: (file?: ScreenRecordingFile) => void` — Called after recording ends (with a delay to allow the file to settle).
 - `onBroadcastPickerShown?: () => void` — Called when the broadcast picker on ios is shown.
 - `onBroadcastPickerDismissed?: () => void` — Called with the broadcast picker on ios is dismissed.
-- `ignoreRecordingsInitiatedElsewhere?: boolean - `iOS-only`allows the listener to only callback when the`startGlobalRecording` is called.
+- `ignoreRecordingsInitiatedElsewhere?: boolean` — `iOS-only` allows the listener to only callback when the `startGlobalRecording` is called.
 - `settledTimeMs?: number` — Milliseconds to wait after recording end before attempting to retrieve the file. Defaults to 500.
+- `enableRecording?: boolean` — Whether to save video to disk when recording starts (default: true).
+- `enableStreaming?: boolean` — Whether to enable real-time frame streaming when recording starts (default: false).
+- `bitrate?: number` — Video encoding bitrate in bits per second (default: 8388608 / 8 Mbps).
+- `fps?: number` — Target frame rate for recording and streaming (default: 60).
 
 **Returns:** `{ isRecording: boolean }` — whether a global recording is currently active.
 
@@ -463,6 +467,10 @@ const { isRecording } = useGlobalRecording({
   },
   ignoreRecordingsInitiatedElsewhere: false,
   settledTimeMs: 600,
+  enableRecording: true,
+  enableStreaming: false,
+  bitrate: 10000000,
+  fps: 30,
 });
 ```
 
@@ -620,21 +628,56 @@ Starts global screen recording that captures the entire device screen. Records s
 **Parameters:**
 
 - `enableMic`: boolean - Whether to enable microphone audio
+- `enableRecording`: boolean (optional) - Whether to save video to disk (default: true)
+- `enableStreaming`: boolean (optional) - Whether to enable real-time frame streaming (default: false)
+- `bitrate`: number (optional) - Video encoding bitrate in bits per second (default: 8388608 / 8 Mbps)
+- `fps`: number (optional) - Target frame rate for recording and streaming (default: 60)
 - `onRecordingError`: (error: RecordingError) => void - Error callback
+
+**Note:** At least one of `enableRecording` or `enableStreaming` must be true.
 
 **Throws:**
 
 - `Error`: If microphone permission is not granted on Android when `enableMic` is `true`.
+- `Error`: If both `enableRecording` and `enableStreaming` are false.
 
 **Example:**
 
 ```ts
 import { startGlobalRecording } from 'react-native-nitro-screen-recorder';
 
+// Recording only
 startGlobalRecording({
-  enableMic: true, // enableMic
+  enableMic: true,
+  enableRecording: true,
+  enableStreaming: false,
+  bitrate: 10000000, // 10 Mbps
+  fps: 60,
   onRecordingError: (error) => {
     console.error('Global recording error:', error.message);
+  },
+});
+
+// Streaming only (no video file saved)
+startGlobalRecording({
+  enableMic: false,
+  enableRecording: false,
+  enableStreaming: true,
+  fps: 30,
+  onRecordingError: (error) => {
+    console.error('Streaming error:', error.message);
+  },
+});
+
+// Both recording and streaming
+startGlobalRecording({
+  enableMic: true,
+  enableRecording: true,
+  enableStreaming: true,
+  bitrate: 8000000,
+  fps: 30,
+  onRecordingError: (error) => {
+    console.error('Recording error:', error.message);
   },
 });
 ```

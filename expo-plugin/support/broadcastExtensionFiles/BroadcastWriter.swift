@@ -72,8 +72,14 @@ public final class BroadcastWriter {
     let codec: AVVideoCodecType = hevcSupported ? .hevc : .h264
 
     var compressionProperties: [String: Any] = [
-      AVVideoExpectedSourceFrameRateKey: 60.nsNumber
+      AVVideoExpectedSourceFrameRateKey: self.frameRate.nsNumber
     ]
+    
+    // Apply bitrate if specified
+    if let bitrate = self.bitrate {
+      compressionProperties[AVVideoAverageBitRateKey] = bitrate.nsNumber
+    }
+    
     if hevcSupported {
       // Works broadly; adjust if you need different profiles
       compressionProperties[AVVideoProfileLevelKey] = "HEVC_Main_AutoLevel"
@@ -133,18 +139,24 @@ public final class BroadcastWriter {
 
   private let screenSize: CGSize
   private let screenScale: CGFloat
+  private let bitrate: Int?
+  private let frameRate: Int
 
   public init(
     outputURL url: URL,
     assetWriterQueue queue: DispatchQueue = .init(label: "BroadcastSampleHandler.assetWriterQueue"),
     screenSize: CGSize,
-    screenScale: CGFloat
+    screenScale: CGFloat,
+    bitrate: Int? = nil,
+    frameRate: Int = 60
   ) throws {
     assetWriterQueue = queue
     assetWriter = try .init(url: url, fileType: .mp4)
 
     self.screenSize = screenSize
     self.screenScale = screenScale
+    self.bitrate = bitrate
+    self.frameRate = frameRate
   }
 
   public func start() throws {

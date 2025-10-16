@@ -131,7 +131,8 @@ object RecorderUtils {
     outputFile: File,
     screenWidth: Int,
     screenHeight: Int,
-    videoBitrate: Int
+    videoBitrate: Int,
+    frameRate: Int = 30
   ): MediaRecorder {
     Log.d(TAG, "🎬 Setting up MediaRecorder: enableMic=$enableMicrophone")
 
@@ -157,7 +158,7 @@ object RecorderUtils {
 
         setOutputFile(outputFile.absolutePath)
         setVideoSize(screenWidth, screenHeight)
-        setVideoFrameRate(30)
+        setVideoFrameRate(frameRate)
         setVideoEncodingBitRate(videoBitrate) // e.g., 2 * 1024 * 1024 for 2 Mbps
 
         if (enableMicrophone) {
