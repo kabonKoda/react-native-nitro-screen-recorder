@@ -9,7 +9,7 @@ import android.media.MediaRecorder
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.media.ImageReader
-import android.graphics.PixelFormat
+import android.graphics.PixelFormat as AndroidPixelFormat
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Binder
@@ -337,16 +337,22 @@ class ScreenRecordingService : Service() {
 
   fun isCurrentlyRecording(): Boolean = isRecording
   
-  fun enableFrameStreaming(enabled: Boolean) {
-    Log.d(TAG, "🎞️ Frame streaming ${if (enabled) "enabled" else "disabled"}")
-    frameStreamingEnabled = enabled
+  fun enableFrameStreaming(maxFps: Int) {
+    Log.d(TAG, "🎞️ Frame streaming enabled with maxFps: $maxFps")
+    frameStreamingEnabled = true
+    minFrameIntervalMs = (1000.0 / maxFps).toLong()
     
-    if (isRecording) {
-      if (enabled && frameVirtualDisplay == null) {
-        setupFrameStreaming()
-      } else if (!enabled && frameVirtualDisplay != null) {
-        cleanupFrameStreaming()
-      }
+    if (isRecording && frameVirtualDisplay == null) {
+      setupFrameStreaming()
+    }
+  }
+  
+  fun disableFrameStreaming() {
+    Log.d(TAG, "🎞️ Frame streaming disabled")
+    frameStreamingEnabled = false
+    
+    if (frameVirtualDisplay != null) {
+      cleanupFrameStreaming()
     }
   }
   
@@ -364,7 +370,7 @@ class ScreenRecordingService : Service() {
       imageReader = ImageReader.newInstance(
         screenWidth,
         screenHeight,
-        PixelFormat.RGBA_8888,
+        AndroidPixelFormat.RGBA_8888,
         2 // Double buffering
       )
       
@@ -408,26 +414,33 @@ class ScreenRecordingService : Service() {
         val buffer = planes[0].buffer
         val pixelStride = planes[0].pixelStride
         val rowStride = planes[0].rowStride
-        val rowPadding = rowStride - pixelStride * screenWidth
         
-        val relativeTimestamp = timestamp - recordingStartTime
+        // Extract pixel data from buffer
+        buffer.rewind()
+        val size = buffer.remaining()
+        val bytes = ByteArray(size)
+        buffer.get(bytes)
         
-        // Create ScreenFrame object and notify listeners
+        // Create ArrayBuffer from bytes
+        val arrayBuffer = ArrayBuffer.allocate(size)
+        arrayBuffer.write(bytes)
+        
+        // Create ScreenFrame object with correct parameters
         val frame = ScreenFrame(
+          data = arrayBuffer,
           width = screenWidth.toDouble(),
           height = screenHeight.toDouble(),
-          bytesPerRow = rowStride.toDouble(),
           timestamp = timestamp.toDouble(),
-          relativeTimestamp = relativeTimestamp.toDouble(),
-          format = "RGBA_8888"
+          format = com.margelo.nitro.nitroscreenrecorder.PixelFormat.RGBA  // RGBA_8888 format from ImageReader
         )
         
         NitroScreenRecorder.notifyFrameAvailable(frame)
         
-        Log.d(TAG, "📸 Frame captured: ${screenWidth}x${screenHeight}, timestamp=$relativeTimestamp ms")
+        Log.d(TAG, "📸 Frame captured: ${screenWidth}x${screenHeight}, size=$size bytes, timestamp=$timestamp ms")
       }
     } catch (e: Exception) {
       Log.e(TAG, "❌ Error processing frame: ${e.message}")
+      e.printStackTrace()
     } finally {
       image?.close()
     }

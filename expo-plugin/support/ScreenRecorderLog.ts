@@ -1,5 +1,5 @@
 export class ScreenRecorderLog {
-  private static readonly PLUGIN = 'react-native-nitro-screen-recorder';
+  private static readonly PLUGIN = 'rn-nitro-screen-recorder';
 
   static log(message: string, ...optional: any[]) {
     const green = '\x1b[32m';
