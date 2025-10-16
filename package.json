@@ -1,6 +1,6 @@
 {
   "name": "rn-nitro-screen-recorder",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
@@ -37,7 +37,6 @@
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "build:plugin": "node scripts/build-plugin.js",
     "prepare": "yarn clean && bob build && yarn nitrogen && yarn build:plugin",
-    "postinstall": "yarn prepare",
     "nitrogen": "nitrogen",
     "release": "yarn prepare && release-it --only-version"
   },
