@@ -1,5 +1,5 @@
 {
-  "name": "react-native-nitro-screen-recorder",
+  "name": "rn-nitro-screen-recorder",
   "version": "0.4.8",
   "description": "A library to capture screen recordings with react-native powered by NitroModules.",
   "main": "lib/commonjs/index",
