@@ -1,6 +1,10 @@
 package com.margelo.nitro.nitroscreenrecorder
 
-import android.app.*
+import android.app.Activity
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -10,10 +14,10 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.media.ImageReader
 import android.graphics.PixelFormat as AndroidPixelFormat
-import android.os.Handler
-import android.os.HandlerThread
 import android.os.Binder
 import android.os.Build
+import android.os.Handler
+import android.os.HandlerThread
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -50,6 +54,11 @@ class ScreenRecordingService : Service() {
   private var lastFrameTime: Long = 0
   private var minFrameIntervalMs: Long = 33 // ~30 FPS
   private var recordingStartTime: Long = 0
+  
+  // Buffer pool for frame data to prevent OOM
+  private val bufferPool = ArrayDeque<ArrayBuffer>()
+  private val maxPoolSize = 3
+  private var lastBufferSize = 0
 
   private val binder = LocalBinder()
 
@@ -75,6 +84,8 @@ class ScreenRecordingService : Service() {
     const val EXTRA_ENABLE_STREAMING = "ENABLE_STREAMING"
     const val EXTRA_BITRATE = "BITRATE"
     const val EXTRA_FPS = "FPS"
+    const val EXTRA_WIDTH = "WIDTH"
+    const val EXTRA_HEIGHT = "HEIGHT"
   }
 
   inner class LocalBinder : Binder() {
@@ -117,10 +128,19 @@ class ScreenRecordingService : Service() {
         val enableStream = intent.getBooleanExtra(EXTRA_ENABLE_STREAMING, false)
         val bitrateValue = if (intent.hasExtra(EXTRA_BITRATE)) intent.getIntExtra(EXTRA_BITRATE, 0) else null
         val fpsValue = intent.getIntExtra(EXTRA_FPS, 60)
+        val widthValue = intent.getIntExtra(EXTRA_WIDTH, 0)
+        val heightValue = intent.getIntExtra(EXTRA_HEIGHT, 0)
+        
+        // Use custom resolution if provided (non-zero), otherwise use screen dimensions
+        if (widthValue > 0 && heightValue > 0) {
+          screenWidth = widthValue
+          screenHeight = heightValue
+          Log.d(TAG, "📐 Using custom resolution: ${screenWidth}x${screenHeight}")
+        }
 
         Log.d(
           TAG,
-          "🎬 Start recording: resultCode=$resultCode, enableMic=$enableMicrophone, enableRecording=$enableRec, enableStreaming=$enableStream, bitrate=$bitrateValue, fps=$fpsValue"
+          "🎬 Start recording: resultCode=$resultCode, enableMic=$enableMicrophone, enableRecording=$enableRec, enableStreaming=$enableStream, bitrate=$bitrateValue, fps=$fpsValue, resolution=${screenWidth}x${screenHeight}"
         )
 
         if (resultData != null) {
@@ -406,6 +426,26 @@ class ScreenRecordingService : Service() {
     }
   }
   
+  private fun getOrCreateBuffer(size: Int): ArrayBuffer {
+    // Try to reuse a buffer from the pool
+    synchronized(bufferPool) {
+      if (bufferPool.isNotEmpty() && lastBufferSize == size) {
+        return bufferPool.removeFirst()
+      }
+      lastBufferSize = size
+    }
+    // Create new buffer if pool is empty or size changed
+    return ArrayBuffer.allocate(size)
+  }
+  
+  private fun returnBufferToPool(buffer: ArrayBuffer) {
+    synchronized(bufferPool) {
+      if (bufferPool.size < maxPoolSize) {
+        bufferPool.addLast(buffer)
+      }
+    }
+  }
+  
   private fun processFrame(reader: ImageReader, timestamp: Long) {
     var image: android.media.Image? = null
     try {
@@ -419,13 +459,14 @@ class ScreenRecordingService : Service() {
         // Extract pixel data from buffer
         buffer.rewind()
         val size = buffer.remaining()
-        val bytes = ByteArray(size)
-        buffer.get(bytes)
         
-        // Create ArrayBuffer from bytes
-        val arrayBuffer = ArrayBuffer.allocate(size)
+        // Get or create ArrayBuffer from pool
+        val arrayBuffer = getOrCreateBuffer(size)
         val byteBuffer = arrayBuffer.getBuffer(false)
-        byteBuffer.put(bytes)
+        byteBuffer.clear()
+        
+        // Copy data directly from image buffer to ArrayBuffer
+        byteBuffer.put(buffer)
         byteBuffer.rewind()
         
         // Create ScreenFrame object with correct parameters
@@ -439,8 +480,19 @@ class ScreenRecordingService : Service() {
         
         NitroScreenRecorder.notifyFrameAvailable(frame)
         
-        Log.d(TAG, "📸 Frame captured: ${screenWidth}x${screenHeight}, size=$size bytes, timestamp=$timestamp ms")
+        // Return buffer to pool for reuse after a short delay
+        frameHandler?.postDelayed({
+          returnBufferToPool(arrayBuffer)
+        }, 100) // Wait 100ms before returning to pool
+        
+        Log.d(TAG, "📸 Frame captured: ${screenWidth}x${screenHeight}, size=$size bytes, timestamp=$timestamp ms, pool size=${bufferPool.size}")
       }
+    } catch (e: OutOfMemoryError) {
+      Log.e(TAG, "❌ OutOfMemoryError processing frame - clearing buffer pool")
+      synchronized(bufferPool) {
+        bufferPool.clear()
+      }
+      System.gc()
     } catch (e: Exception) {
       Log.e(TAG, "❌ Error processing frame: ${e.message}")
       e.printStackTrace()
@@ -462,6 +514,11 @@ class ScreenRecordingService : Service() {
       frameHandlerThread?.quitSafely()
       frameHandlerThread = null
       frameHandler = null
+      
+      // Clear buffer pool
+      synchronized(bufferPool) {
+        bufferPool.clear()
+      }
       
       Log.d(TAG, "✅ Frame streaming cleanup complete")
     } catch (e: Exception) {

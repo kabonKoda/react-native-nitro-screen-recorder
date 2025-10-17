@@ -380,6 +380,7 @@ class NitroScreenRecorder : HybridNitroScreenRecorderSpec() {
         putExtra(ScreenRecordingService.EXTRA_ENABLE_STREAMING, enableStreaming)
         putExtra(ScreenRecordingService.EXTRA_BITRATE, bitrate.toInt())
         putExtra(ScreenRecordingService.EXTRA_FPS, fps.toInt())
+        // Width and height not specified - service will use screen dimensions
       }
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
